@@ -41,6 +41,16 @@ import {
   RBC_BACK_SCALE,
   RBC_BACK_OPACITY,
   RBC_BACK_SPEED_FACTOR,
+  PLUME_MIN_REACH,
+  PLUME_MAX_REACH,
+  PLUME_MIN_WIDTH,
+  PLUME_MAX_WIDTH,
+  PLUME_LEAK_NORM,
+  POOL_BASE_RX,
+  POOL_MAX_RX,
+  POOL_RY,
+  POOL_Y_OFFSET,
+  DROPLET_MAX,
 } from "../theme";
 
 export const SVG_NS = "http://www.w3.org/2000/svg";
@@ -296,6 +306,8 @@ export type Refs = {
   clotBulge: SVGCircleElement;
   fibrinGroup: SVGGElement;
   dripGroup: SVGGElement;
+  bleedPlume: SVGPathElement;
+  bleedPool: SVGEllipseElement;
   rbcBackGroup: SVGGElement;
   rbcGroup: SVGGElement;
   plateletGroup: SVGGElement;
@@ -304,16 +316,19 @@ export type Refs = {
   bloodStain: SVGCircleElement;
 };
 
+// Irregular droplets are a minor secondary detail now — the plume and pool
+// carry the primary bleeding read. See CLOT-FLOW visual reference, Plate 05.
 function renderDrips(
   group: SVGGElement,
-  els: SVGCircleElement[],
+  els: SVGEllipseElement[],
   leakValue: number,
   elapsed: number,
 ) {
-  const count = Math.round(clamp01(leakValue / 0.5) * 5);
+  const count = Math.round(clamp01(leakValue / 0.5) * DROPLET_MAX);
   while (els.length < count) {
-    const c = document.createElementNS(SVG_NS, "circle");
-    c.setAttribute("r", "4");
+    const c = document.createElementNS(SVG_NS, "ellipse");
+    c.setAttribute("rx", "3");
+    c.setAttribute("ry", "5");
     group.appendChild(c);
     els.push(c);
   }
@@ -323,10 +338,37 @@ function renderDrips(
   }
   els.forEach((c, i) => {
     const t = (elapsed / DRIP_PERIOD + i * 0.35) % 1;
-    c.setAttribute("cx", String(WOUND_X - 18 + i * 9));
+    c.setAttribute("cx", String(WOUND_X - 14 + i * 28));
     c.setAttribute("cy", String(WOUND_Y + 15 + t * 140));
     c.setAttribute("opacity", String(clamp01(1 - t)));
   });
+}
+
+// A seeping plume opening downward from the wound — width and reach both
+// track leak(state) every frame, never a fixed-duration animation.
+function renderPlume(el: SVGPathElement, leakValue: number) {
+  const t = clamp01(leakValue / PLUME_LEAK_NORM);
+  const reach = PLUME_MIN_REACH + (PLUME_MAX_REACH - PLUME_MIN_REACH) * t;
+  const width = PLUME_MIN_WIDTH + (PLUME_MAX_WIDTH - PLUME_MIN_WIDTH) * t;
+  const x = WOUND_X;
+  const y = WOUND_Y;
+  const d =
+    `M ${x - width * 0.15} ${y} ` +
+    `C ${x - width * 0.5} ${y + reach * 0.25} ${x - width * 0.35} ${y + reach * 0.7} ${x} ${y + reach} ` +
+    `C ${x + width * 0.35} ${y + reach * 0.7} ${x + width * 0.5} ${y + reach * 0.25} ${x + width * 0.15} ${y} Z`;
+  el.setAttribute("d", d);
+  el.setAttribute("opacity", (0.25 + 0.75 * t).toFixed(3));
+}
+
+// The pool IS the blood-loss gauge — its rx is driven directly by
+// (1 - bloodVolume), so no numeric blood-loss readout is ever needed.
+function renderPool(el: SVGEllipseElement, bloodVolume: number) {
+  const lost = clamp01(1 - bloodVolume);
+  el.setAttribute("cx", String(WOUND_X));
+  el.setAttribute("cy", String(WOUND_Y + POOL_Y_OFFSET));
+  el.setAttribute("rx", (POOL_BASE_RX + (POOL_MAX_RX - POOL_BASE_RX) * lost).toFixed(2));
+  el.setAttribute("ry", String(POOL_RY));
+  el.setAttribute("opacity", (0.35 + 0.55 * lost).toFixed(3));
 }
 
 function renderFibrin(group: SVGGElement, els: SVGPathElement[], fibrin: Fibrin[], woundR: number) {
@@ -444,7 +486,7 @@ export function createRenderer(refs: Refs) {
   const rbcEls = new Map<number, SVGEllipseElement>();
   const plateletEls = new Map<number, PlateletEls>();
   const fibrinEls: SVGPathElement[] = [];
-  const dripEls: SVGCircleElement[] = [];
+  const dripEls: SVGEllipseElement[] = [];
 
   return function render(gameState: GameState, visual: VisualState) {
     const bloodVol = clamp01(gameState.bloodVolume);
@@ -490,6 +532,8 @@ export function createRenderer(refs: Refs) {
     refs.bloodStain.setAttribute("opacity", (visual.bloodStain * 0.5).toFixed(3));
 
     renderDrips(refs.dripGroup, dripEls, leakValue, gameState.elapsed);
+    renderPlume(refs.bleedPlume, leakValue);
+    renderPool(refs.bleedPool, bloodVol);
     renderFibrin(refs.fibrinGroup, fibrinEls, visual.fibrin, woundR);
     renderRBCs(refs.rbcBackGroup, rbcBackEls, visual.rbcsBack, "rbc-back", RBC_BACK_OPACITY);
     renderRBCs(refs.rbcGroup, rbcEls, visual.rbcs);

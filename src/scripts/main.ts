@@ -37,6 +37,8 @@ const refs: Refs = {
   clotBulge: need<SVGCircleElement>("clot-bulge"),
   fibrinGroup: need<SVGGElement>("fibrin-group"),
   dripGroup: need<SVGGElement>("drip-group"),
+  bleedPlume: need<SVGPathElement>("bleed-plume"),
+  bleedPool: need<SVGEllipseElement>("bleed-pool"),
   rbcBackGroup: need<SVGGElement>("rbc-back-group"),
   rbcGroup: need<SVGGElement>("rbc-group"),
   plateletGroup: need<SVGGElement>("platelet-group"),

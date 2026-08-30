@@ -109,3 +109,24 @@ export const VESSEL_LUMEN_PATH =
   `${VESSEL_TOP_PATH} L1600,500 C1333.3,488 1066.7,512 800,500 C533.3,488 320,512 0,500 Z`;
 
 export const WOUND_TEAR_SCALE = 28;
+
+// ---------- bleeding (seeping plume + growing pool) ----------
+// The pool's rx is driven directly by (1 - bloodVolume) — it IS the
+// blood-loss gauge, so no numeric readout is ever drawn alongside it.
+export const COLOR_PLUME_NEAR = "#7a1119";
+export const COLOR_PLUME_FAR = "#5e0f16";
+export const PLUME_MIN_REACH = 40;
+export const PLUME_MAX_REACH = 260;
+export const PLUME_MIN_WIDTH = 26;
+export const PLUME_MAX_WIDTH = 40;
+export const PLUME_LEAK_NORM = 0.35; // leak(state) value at which the plume is fully extended
+
+export const COLOR_POOL = "#4d0c12";
+export const POOL_BASE_RX = 22;
+export const POOL_MAX_RX = 130;
+export const POOL_RY = 24;
+export const POOL_Y_OFFSET = 64;
+
+// A couple of irregular droplets remain as secondary detail alongside the
+// plume/pool — not the primary bleeding read any more.
+export const DROPLET_MAX = 2;

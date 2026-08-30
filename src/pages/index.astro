@@ -8,6 +8,9 @@ import {
   COLOR_WOUND_DARKEST,
   COLOR_SEAL_FLASH_STROKE,
   COLOR_DRIP,
+  COLOR_PLUME_NEAR,
+  COLOR_PLUME_FAR,
+  COLOR_POOL,
   COLOR_RBC_FALLBACK,
   COLOR_RBC_CORE,
   COLOR_RBC_MID,
@@ -79,6 +82,11 @@ import {
           <stop offset="0%" stop-color={COLOR_RBC_BACK_NEAR}></stop>
           <stop offset="100%" stop-color={COLOR_RBC_BACK_FAR}></stop>
         </radialGradient>
+        <radialGradient id="plume" cx="50%" cy="6%" r="92%">
+          <stop offset="0%" stop-color={COLOR_PLUME_NEAR} stop-opacity="0.95"></stop>
+          <stop offset="55%" stop-color={COLOR_PLUME_FAR} stop-opacity="0.55"></stop>
+          <stop offset="100%" stop-color={COLOR_PLUME_FAR} stop-opacity="0"></stop>
+        </radialGradient>
       </defs>
 
       <ellipse
@@ -128,6 +136,8 @@ import {
       />
 
       <circle id="blood-stain" cx={WOUND_X} cy="600" r="0" fill="url(#stain-grad)" opacity="0" />
+      <ellipse id="bleed-pool" cx={WOUND_X} cy={WOUND_Y} rx="0" ry="0" fill={COLOR_POOL} opacity="0" />
+      <path id="bleed-plume" fill="url(#plume)" opacity="0" />
       <circle id="idle-glow" cx={WOUND_X} cy={WOUND_Y} r="90" fill="#ff5b5b" opacity="0" />
       <circle id="clot-bulge" cx={WOUND_X} cy={WOUND_Y} r="0" fill="#5c1b1b" opacity="0" />
       <g id="fibrin-group" stroke="#f2d9c8" stroke-width="2.5" fill="none" opacity="0.9"></g>
