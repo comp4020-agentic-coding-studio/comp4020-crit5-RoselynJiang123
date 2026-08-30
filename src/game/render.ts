@@ -43,9 +43,11 @@ import {
   HINT_DURATION,
   HINT_AMPLITUDE,
   FIBRIN_STRAND_MAX,
-  FIBRIN_MESH_BASE_RADIUS,
-  FIBRIN_MESH_RADIUS_GROWTH,
   FIBRIN_CROSSLINK_EVERY,
+  FIBRIN_BOX_X_RANGE,
+  FIBRIN_BOX_Y_MIN,
+  FIBRIN_BOX_Y_MAX,
+  FIBRIN_BOW,
   DRIP_PERIOD,
   SEAL_FLASH_DURATION,
   LUMEN_FULL,
@@ -79,10 +81,12 @@ import {
   COLOR_PLATELET_ATTACHED,
   PLATELET_PILE_MAX,
   PLATELET_PILE_SCALE,
-  PLATELET_PILE_SPREAD,
+  PLATELET_PILE_SLOTS,
   PLATELET_PSEUDOPOD_COUNT,
   PLATELET_PSEUDOPOD_LEN,
   clotMoundPath,
+  clotMoundHalfWidth,
+  REF_SCALE_Y,
 } from "../theme";
 
 export const SVG_NS = "http://www.w3.org/2000/svg";
@@ -437,39 +441,53 @@ function hash01(seed: number): number {
   return s - Math.floor(s);
 }
 
-// A woven mesh anchored in the clot mass: both ends of every strand fall
-// within a radius that grows with clot (the same "clot mass" the platelet
-// pile occupies), and angleA/angleB are independently randomised rather than
-// near-opposite, so strands cross each other instead of radiating cleanly —
-// that crossing IS the weave. Every FIBRIN_CROSSLINK_EVERYth strand spans a
-// wider radius so a few links visibly bridge across the mesh.
-function renderFibrinMesh(group: SVGGElement, els: SVGPathElement[], clotValue: number) {
+// A woven mesh drawn in a normalised box (x: -1..1 across the mound's own
+// half-width, y: 0 at the wall base .. 1 at the mound's own height) — the
+// group transform below stretches that box to the mound's actual size every
+// frame, so the mesh always sits on the mass and scales with it rather than
+// growing independently. angleA/angleB analogues (the two endpoints) are
+// independently randomised rather than mirrored, so strands cross each other
+// instead of radiating cleanly — that crossing IS the weave. Every
+// FIBRIN_CROSSLINK_EVERYth strand spans further so a few links visibly
+// bridge across the mesh. vector-effect keeps stroke width constant on
+// screen despite the non-uniform scale.
+function renderFibrinMesh(
+  group: SVGGElement,
+  els: SVGPathElement[],
+  clotValue: number,
+  halfWidth: number,
+  clotHeight: number,
+) {
   const count = Math.min(FIBRIN_STRAND_MAX, Math.round(clamp01(clotValue) * FIBRIN_STRAND_MAX));
   while (els.length < count) {
     const p = document.createElementNS(SVG_NS, "path");
     p.setAttribute("stroke-linecap", "round");
+    p.setAttribute("vector-effect", "non-scaling-stroke");
     group.appendChild(p);
     els.push(p);
   }
   while (els.length > count) {
     els.pop()!.remove();
   }
-  const meshR = FIBRIN_MESH_BASE_RADIUS + FIBRIN_MESH_RADIUS_GROWTH * clamp01(clotValue);
+  group.setAttribute(
+    "transform",
+    `translate(${WOUND_X.toFixed(1)},${yBot(WOUND_X).toFixed(1)}) scale(${halfWidth.toFixed(2)},${(-clotHeight).toFixed(2)})`,
+  );
   els.forEach((el, i) => {
     const isCrossLink = i % FIBRIN_CROSSLINK_EVERY === FIBRIN_CROSSLINK_EVERY - 1;
-    const rA = meshR * (0.4 + 0.6 * hash01(i * 2));
-    const rB = meshR * (isCrossLink ? 1 : 0.4 + 0.6 * hash01(i * 2 + 1));
-    const angleA = hash01(i * 3.1) * Math.PI * 2;
-    const angleB = hash01(i * 3.1 + 1.7) * Math.PI * 2;
-    const x1 = WOUND_X + Math.cos(angleA) * rA;
-    const y1 = WOUND_Y + Math.sin(angleA) * rA;
-    const x2 = WOUND_X + Math.cos(angleB) * rB;
-    const y2 = WOUND_Y + Math.sin(angleB) * rB;
-    const bow = (hash01(i * 5.3) - 0.5) * meshR * 0.7;
-    const mid = (angleA + angleB) / 2;
-    const mx = (x1 + x2) / 2 + Math.cos(mid + Math.PI / 2) * bow;
-    const my = (y1 + y2) / 2 + Math.sin(mid + Math.PI / 2) * bow;
-    el.setAttribute("d", `M ${x1.toFixed(1)} ${y1.toFixed(1)} Q ${mx.toFixed(1)} ${my.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`);
+    const spanA = isCrossLink ? 1 : 0.5 + 0.5 * hash01(i * 2);
+    const spanB = isCrossLink ? 1 : 0.5 + 0.5 * hash01(i * 2 + 1);
+    const x1 = (hash01(i * 3.1) * 2 - 1) * FIBRIN_BOX_X_RANGE * spanA;
+    const y1 = FIBRIN_BOX_Y_MIN + hash01(i * 3.1 + 1.7) * (FIBRIN_BOX_Y_MAX - FIBRIN_BOX_Y_MIN);
+    const x2 = (hash01(i * 3.1 + 3.4) * 2 - 1) * FIBRIN_BOX_X_RANGE * spanB;
+    const y2 = FIBRIN_BOX_Y_MIN + hash01(i * 3.1 + 5.1) * (FIBRIN_BOX_Y_MAX - FIBRIN_BOX_Y_MIN);
+    const bow = (hash01(i * 5.3) - 0.5) * FIBRIN_BOW;
+    const mx = (x1 + x2) / 2 + bow;
+    const my = (y1 + y2) / 2 + bow * 0.4;
+    el.setAttribute(
+      "d",
+      `M ${x1.toFixed(3)} ${y1.toFixed(3)} Q ${mx.toFixed(3)} ${my.toFixed(3)} ${x2.toFixed(3)} ${y2.toFixed(3)}`,
+    );
   });
 }
 
@@ -682,20 +700,21 @@ function renderPlatelets(
   }
 }
 
-// Attached platelets read as a pile of blobs stacked at the wound, not as
-// individually-visible dots — count is driven straight from clot (one blob
-// per 0.1), positions are a fixed golden-angle spiral so the pile never
-// reshuffles as blobs are added or removed. See "bind every visual to
-// state": platelet pile count <- clot.
-const PILE_GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
-
+// Attached platelets read as the pale mass itself: a fixed pyramid of packed,
+// overlapping blobs (bottom-to-top rows, see PLATELET_PILE_SLOTS), not a
+// spiral that spreads them apart. Count is driven straight from clot (one
+// blob per 0.1), and the pyramid's own slots never reshuffle as blobs are
+// added or removed — the pile only ever grows or shrinks from the top. See
+// "bind every visual to state": platelet pile count <- clot; and CLOT-FLOW
+// visual reference, Plate 08.
 function renderPlateletPile(
   group: SVGGElement,
   els: SVGGElement[],
   clotValue: number,
   clotHeight: number,
 ) {
-  const count = Math.min(PLATELET_PILE_MAX, Math.round(clamp01(clotValue) * PLATELET_PILE_MAX));
+  const clot = clamp01(clotValue);
+  const count = Math.min(PLATELET_PILE_MAX, Math.round(clot * PLATELET_PILE_MAX));
   while (els.length < count) {
     const g = document.createElementNS(SVG_NS, "g");
     const use = document.createElementNS(SVG_NS, "use");
@@ -717,25 +736,23 @@ function renderPlateletPile(
   while (els.length > count) {
     els.pop()!.remove();
   }
+  const half = clotMoundHalfWidth(clot);
+  const base = yBot(WOUND_X);
+  const rowHeight = Math.max(11 * REF_SCALE_Y, clotHeight / 4.4);
   els.forEach((g, i) => {
-    const angle = i * PILE_GOLDEN_ANGLE;
-    const spreadFrac = Math.sqrt(i / PLATELET_PILE_MAX);
-    const dx = Math.cos(angle) * PLATELET_PILE_SPREAD * spreadFrac;
-    const cx = WOUND_X + dx;
-    const wallY = yBot(cx);
-    // Later blobs (higher i, further from the breach centre) sit progressively
-    // higher up the mound, following the same gaussian profile that shapes the
-    // mound itself — the pile climbs into the lumen, it doesn't just widen.
-    const intrusion = clotHeight * gauss(dx, CLOT_PROFILE_SPREAD);
-    const climb = ((i + 0.5) / PLATELET_PILE_MAX) * intrusion;
-    const cy = wallY - climb + Math.sin(angle) * 6;
+    const { level, slot } = PLATELET_PILE_SLOTS[i];
+    const cx = WOUND_X + slot * half * 0.68;
+    const cy = base - rowHeight * (level + 0.62);
+    // A small per-blob jitter (deterministic, not per-frame random) so the
+    // pyramid still reads as irregular cells, not a machined stack.
+    const rot = (hash01(i * 7.7) - 0.5) * 30;
     g.setAttribute(
       "transform",
-      `translate(${cx.toFixed(1)},${cy.toFixed(1)}) rotate(${((angle * 180) / Math.PI).toFixed(1)}) scale(${PLATELET_PILE_SCALE})`,
+      `translate(${cx.toFixed(1)},${cy.toFixed(1)}) rotate(${rot.toFixed(1)}) scale(${PLATELET_PILE_SCALE})`,
     );
     for (let k = 0; k < PLATELET_PSEUDOPOD_COUNT; k++) {
       const pod = g.children[k + 1] as SVGPathElement;
-      const podAngle = (k / PLATELET_PSEUDOPOD_COUNT) * Math.PI * 2 + angle;
+      const podAngle = (k / PLATELET_PSEUDOPOD_COUNT) * Math.PI * 2;
       const x1 = Math.cos(podAngle) * 8;
       const y1 = Math.sin(podAngle) * 8;
       const x2 = Math.cos(podAngle) * (8 + PLATELET_PSEUDOPOD_LEN);
@@ -756,7 +773,6 @@ export function createRenderer(refs: Refs) {
   return function render(gameState: GameState, visual: VisualState) {
     const bloodVol = clamp01(gameState.bloodVolume);
     const lumenValue = lumen(gameState);
-    const occlusion = clamp01(1 - lumenValue);
     const leakValue = leak(gameState);
     const oxygenValue = clamp01(oxygen(gameState));
     const pulseValue = pulse(gameState.elapsed);
@@ -773,8 +789,7 @@ export function createRenderer(refs: Refs) {
     renderBreach(refs, gameState.woundSize, gameState.elapsed);
 
     const clotHeight = (1 - lumenValue) * LUMEN_HEIGHT;
-    refs.clotBulge.setAttribute("d", clotMoundPath(clotHeight));
-    refs.clotBulge.setAttribute("opacity", (0.5 + 0.4 * occlusion).toFixed(3));
+    refs.clotBulge.setAttribute("d", clotMoundPath(gameState.clot, clotHeight));
     renderPlateletPile(refs.plateletPileGroup, pileEls, gameState.clot, clotHeight);
 
     const hintEnvelope = visual.hintActive
@@ -798,7 +813,13 @@ export function createRenderer(refs: Refs) {
     renderPlume(refs.bleedPlume, leakValue);
     renderPlumeCore(refs.bleedCore, leakValue);
     renderPool(refs.bleedPool, bloodVol);
-    renderFibrinMesh(refs.fibrinGroup, fibrinEls, gameState.clot);
+    renderFibrinMesh(
+      refs.fibrinGroup,
+      fibrinEls,
+      gameState.clot,
+      clotMoundHalfWidth(clamp01(gameState.clot)),
+      clotHeight,
+    );
     renderRBCs(refs.rbcBackGroup, rbcBackEls, visual.rbcsBack, clotHeight, "rbc-back", RBC_BACK_OPACITY);
     renderRBCs(refs.rbcGroup, rbcEls, visual.rbcs, clotHeight);
     renderPlatelets(

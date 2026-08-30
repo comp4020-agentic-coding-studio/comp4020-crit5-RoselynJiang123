@@ -93,7 +93,9 @@ export function breachGeom(woundSize: number): BreachGeom {
 
 // Gaussian spreads for the clot's two effects on cell motion: how far its
 // upward push (on the lower bound) and its upstream speed dip reach along x.
-export const CLOT_PROFILE_SPREAD = 58 * REF_SCALE_X;
+// Narrow (36, not 58): the clot mass itself is narrow and tall, not a wide
+// hill, so the red-cell push it drives must match the same footprint.
+export const CLOT_PROFILE_SPREAD = 36 * REF_SCALE_X;
 export const CONGESTION_SPREAD = 86 * REF_SCALE_X;
 export const CONGESTION_STRENGTH = 0.7; // local speed dips to (1 - 0.7) at clot=1, x=WOUND_X
 
@@ -152,12 +154,26 @@ export const PLATELET_GLOW_OPACITY_HOVER = 0.7;
 // Once attached, individual platelet elements are hidden — they read
 // visually as the platelet-pile blobs stacked at the wound instead. See
 // "bind every visual to state": platelet pile count <- clot.
-export const COLOR_PLATELET_ATTACHED = "#e6d4bb";
+// Brighter than the pale backing mass (see COLOR_CLOT_MASS_*) so individual
+// packed cells still read as distinct platelets, not as one blob.
+export const COLOR_PLATELET_ATTACHED = "#f0e2cc";
 export const PLATELET_PILE_MAX = 10; // one blob per 0.1 clot
-export const PLATELET_PILE_SCALE = 1;
-export const PLATELET_PILE_SPREAD = CLOT_PROFILE_SPREAD * 0.9;
+export const PLATELET_PILE_SCALE = REF_SCALE_Y;
 export const PLATELET_PSEUDOPOD_COUNT = 3;
 export const PLATELET_PSEUDOPOD_LEN = 5;
+
+// A fixed pyramid, not a spiral: bottom-to-top rows of packed slots (as a
+// fraction of the mound's own half-width), so platelets always overlap their
+// neighbours rather than drifting apart as the pile grows. See CLOT-FLOW
+// visual reference, Plate 08.
+export const PLATELET_PILE_ROWS: number[][] = [
+  [-0.78, -0.28, 0.22, 0.7],
+  [-0.5, 0, 0.5],
+  [-0.26, 0.26],
+  [0],
+];
+export const PLATELET_PILE_SLOTS: { level: number; slot: number }[] =
+  PLATELET_PILE_ROWS.flatMap((row, level) => row.map((slot) => ({ level, slot })));
 
 // ---------- timings ----------
 export const GLIDE_DURATION = 0.15;
@@ -200,26 +216,47 @@ export const TISSUE_ELLIPSE = { cx: 1250, cy: 450, rx: 380, ry: 260, opacity: 0.
 // ---------- idle hint / clot occlusion / seal flash / blood stain ----------
 export const COLOR_IDLE_GLOW = "#ff5b5b";
 export const IDLE_GLOW_RADIUS = 90;
-export const COLOR_CLOT_BULGE = "#5c1b1b";
 export const SEAL_FLASH_STROKE_WIDTH = 3;
 export const STAIN_Y_OFFSET = 150;
 
-export const CLOT_MOUND_HALF_WIDTH = CLOT_PROFILE_SPREAD * 2.4;
+// A platelet-rich clot is a "white thrombus" — paler than blood, not darker.
+// A dark shape over dark blood reads as a hole; this gradient (index.astro
+// linearGradient#clotMass) must always read as pale matter piled into the
+// lumen. See CLOT-FLOW visual reference, Plate 08.
+export const COLOR_CLOT_MASS_TOP = "#e2d0b7";
+export const COLOR_CLOT_MASS_MID = "#c4ab8e";
+export const COLOR_CLOT_MASS_BOTTOM = "#9b8168";
+export const CLOT_MASS_OPACITY = 0.94;
 
-// The clot's visible intrusion into the lumen — a mound whose top follows the
-// exact same gaussian push used to raise red cells (clotHeight *
-// gauss(x - WOUND_X, CLOT_PROFILE_SPREAD), see renderRBCs), so the drawn clot
-// and the channel it visibly narrows can never disagree. Anchored on the
-// wall curve at its base, matching the breach it grows out of, and rising by
-// clotHeight at its peak (x = WOUND_X).
-export function clotMoundPath(clotHeight: number): string {
-  const half = CLOT_MOUND_HALF_WIDTH;
+// Narrow and tall, not wide and flat: half-width grows with clot itself
+// (about 8-17% of the frame width), rather than a fixed span regardless of
+// how much clot has actually been placed.
+export function clotMoundHalfWidth(clotValue: number): number {
+  return (26 + clotValue * 24) * REF_SCALE_X;
+}
+
+// The dome's outline in normalised x (-1..1): NOT a smooth gaussian — a wide
+// smooth curve reads as a hill. Uneven, asymmetric shoulders read as a mass
+// built from lumpy parts instead.
+function moundProfile(u: number): number {
+  const dome = Math.pow(Math.max(0, 1 - u * u), 0.7);
+  const lumps = 1 + 0.16 * Math.sin(u * 3.4 + 0.6) + 0.09 * Math.sin(u * 6.1 - 1.1);
+  return Math.max(0, dome * lumps);
+}
+
+// The clot's visible intrusion into the lumen — a pale, lumpy dome anchored
+// on the wall curve at its base, matching the breach it grows out of, and
+// rising by clotHeight at its peak (x = WOUND_X). Narrow and tall per
+// clotMoundHalfWidth, not the wide flat hill a pure gaussian profile gives.
+export function clotMoundPath(clotValue: number, clotHeight: number): string {
+  const half = clotMoundHalfWidth(Math.max(0, Math.min(1, clotValue)));
   const x0 = WOUND_X - half;
   const x1 = WOUND_X + half;
-  const step = half / 12;
+  const step = half / 14;
   let d = `M${x0.toFixed(1)},${yBot(x0).toFixed(1)}`;
   for (let x = x0 + step; x <= x1; x += step) {
-    const y = yBot(x) - clotHeight * gauss(x - WOUND_X, CLOT_PROFILE_SPREAD);
+    const u = (x - WOUND_X) / half;
+    const y = yBot(x) - clotHeight * moundProfile(u);
     d += ` L${x.toFixed(1)},${y.toFixed(1)}`;
   }
   for (let x = x1 - step; x >= x0; x -= step) {
@@ -232,13 +269,22 @@ export function clotMoundPath(clotHeight: number): string {
 // Count and reach both come straight from clot, so the mesh grows and
 // dissolves along with the clot itself rather than accumulating separately.
 // See "bind every visual to state": fibrin strand count <- round(clot * 12).
-export const COLOR_FIBRIN = "#e8d5c0";
+// Darker than the pale clot mass, so strands still read against it (the
+// mass is pale; nothing dark-on-dark disappears here the way the old
+// dark-hill clot used to swallow pale fibrin).
+export const COLOR_FIBRIN = "#8f7658";
 export const FIBRIN_STROKE_WIDTH = 0.9;
-export const FIBRIN_GROUP_OPACITY = 0.26;
+export const FIBRIN_GROUP_OPACITY = 0.38;
 export const FIBRIN_STRAND_MAX = 12;
-export const FIBRIN_MESH_BASE_RADIUS = 8;
-export const FIBRIN_MESH_RADIUS_GROWTH = 32;
 export const FIBRIN_CROSSLINK_EVERY = 4; // every Nth strand is a cross-link spanning further
+// Strand endpoints live in a normalised box (x: -1..1 across the mound's
+// half-width, y: 0..1 from the wall base up to the mound's own height) and
+// the whole mesh group is transformed to scale with the mound every frame —
+// so it grows and dissolves along with the clot mass itself.
+export const FIBRIN_BOX_X_RANGE = 0.85;
+export const FIBRIN_BOX_Y_MIN = 0.15;
+export const FIBRIN_BOX_Y_MAX = 0.95;
+export const FIBRIN_BOW = 0.3;
 
 // ---------- vessel wall (organic outline) ----------
 // Background tissue reads as flesh, not empty space, only if it is dark and

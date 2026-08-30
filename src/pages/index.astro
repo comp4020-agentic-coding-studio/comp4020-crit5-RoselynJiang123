@@ -40,7 +40,10 @@ import {
   VIEW_H,
   COLOR_IDLE_GLOW,
   IDLE_GLOW_RADIUS,
-  COLOR_CLOT_BULGE,
+  COLOR_CLOT_MASS_TOP,
+  COLOR_CLOT_MASS_MID,
+  COLOR_CLOT_MASS_BOTTOM,
+  CLOT_MASS_OPACITY,
   SEAL_FLASH_STROKE_WIDTH,
   STAIN_Y_OFFSET,
   COLOR_FIBRIN,
@@ -103,6 +106,11 @@ import {
           <stop offset="0%" stop-color={COLOR_BREACH_GLOW} stop-opacity="0.9"></stop>
           <stop offset="100%" stop-color={COLOR_BREACH_GLOW} stop-opacity="0"></stop>
         </radialGradient>
+        <linearGradient id="clotMass" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color={COLOR_CLOT_MASS_TOP}></stop>
+          <stop offset="58%" stop-color={COLOR_CLOT_MASS_MID}></stop>
+          <stop offset="100%" stop-color={COLOR_CLOT_MASS_BOTTOM}></stop>
+        </linearGradient>
       </defs>
 
       <ellipse
@@ -178,7 +186,7 @@ import {
         <path id="bleed-core" fill={COLOR_PLUME_CORE} opacity="0" />
       </g>
       <circle id="idle-glow" cx={WOUND_X} cy={WOUND_Y} r={IDLE_GLOW_RADIUS} fill={COLOR_IDLE_GLOW} opacity="0" />
-      <path id="clot-bulge" fill={COLOR_CLOT_BULGE} opacity="0" />
+      <path id="clot-bulge" fill="url(#clotMass)" opacity={CLOT_MASS_OPACITY} />
       <g id="platelet-pile"></g>
       <g id="fibrin-group" stroke={COLOR_FIBRIN} stroke-width={FIBRIN_STROKE_WIDTH} fill="none" opacity={FIBRIN_GROUP_OPACITY}></g>
 
