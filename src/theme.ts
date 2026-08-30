@@ -13,17 +13,24 @@ export const LUMEN_BOTTOM = 500;
 export const WOUND_X = 800;
 export const WOUND_Y = 450;
 
-// ---------- red blood cells ----------
-export const RBC_MAX = 40;
+// ---------- red blood cells (foreground layer) ----------
+// Haematocrit is ~45% — a vessel is packed with cells that jostle each
+// other. Overlap is intentionally allowed: no collision detection, that IS
+// what blood looks like. See CLOT-FLOW visual reference, Plate 02.
+export const RBC_MAX = 90;
 export const RBC_BASE_SPEED = 260;
 export const RBC_SPAWN_INTERVAL = 0.12;
 export const RBC_QUEUE_ZONE = 220;
 // Biconcave-disc read: an off-centre radial gradient (see the "rbc" gradient
 // in index.astro) plus a flattened ellipse. rx/ry ratio and per-cell rotation
 // and size variance are what sell the disc — see CLOT-FLOW visual reference.
-export const RBC_BASE_RY = 6;
+export const RBC_BASE_RY = 6.5; // ±15% variance keeps ry within ~5.5–7.5
 export const RBC_RX_RATIO = 1.15;
 export const RBC_SIZE_VARIANCE = 0.15; // ±15%, assigned once at spawn
+
+// Hard cap across every RBC layer combined (foreground + background), so a
+// slow tab / low framerate can never accumulate past a bounded ellipse count.
+export const RBC_TOTAL_CAP = 140;
 
 // ---------- platelets ----------
 export const PLATELET_MAX_DRIFTING = 4;
