@@ -10,9 +10,12 @@ import {
   createRenderer,
   createVisualState,
   stepAttaching,
+  stepBloodStain,
   stepPlateletsDrift,
   stepRBCs,
+  stepSealFlash,
   triggerIdleHint,
+  triggerSealFlash,
   WOUND_X,
   WOUND_Y,
 } from "../game/render";
@@ -27,15 +30,17 @@ function need<T extends Element>(id: string): T {
 
 const svg = need<SVGSVGElement>("game");
 const refs: Refs = {
-  vessel: need<SVGRectElement>("vessel"),
-  tissue: need<SVGRectElement>("tissue"),
-  woundGap: need<SVGEllipseElement>("wound-gap"),
+  lumen: need<SVGRectElement>("vessel-lumen"),
+  tissue: need<SVGEllipseElement>("tissue"),
+  woundTear: need<SVGGElement>("wound-tear"),
   clotBulge: need<SVGCircleElement>("clot-bulge"),
   fibrinGroup: need<SVGGElement>("fibrin-group"),
   dripGroup: need<SVGGElement>("drip-group"),
   rbcGroup: need<SVGGElement>("rbc-group"),
   plateletGroup: need<SVGGElement>("platelet-group"),
   idleGlow: need<SVGCircleElement>("idle-glow"),
+  sealFlash: need<SVGCircleElement>("seal-flash"),
+  bloodStain: need<SVGCircleElement>("blood-stain"),
 };
 const titleEl = need<HTMLElement>("title");
 const overlayEl = need<HTMLElement>("outcome-overlay");
@@ -134,8 +139,11 @@ function frame(t: number) {
     for (const _id of completed) {
       gameState = addPlatelet(gameState);
       addFibrinFor(visual);
+      triggerSealFlash(visual);
       playAttachSound();
     }
+    stepBloodStain(visual, gameState, dt);
+    stepSealFlash(visual, dt);
 
     if (!hasInteracted && performance.now() - lastHintAt > 5000) {
       triggerIdleHint(visual);

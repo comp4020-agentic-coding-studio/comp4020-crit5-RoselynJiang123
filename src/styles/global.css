@@ -15,7 +15,13 @@ header.chrome {
   top: 0.5rem;
   left: 0.5rem;
   z-index: 5;
-  opacity: 0.35;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+header.chrome:focus-within,
+header.chrome:hover {
+  opacity: 0.6;
 }
 
 header.chrome nav a {
@@ -84,9 +90,18 @@ h1.title-flash.fade-out {
   cursor: pointer;
 }
 
-.platelet-body {
-  fill: #f4e7c8;
+.platelet-visual,
+.platelet-halo,
+.platelet-body-shape {
   pointer-events: none;
+}
+
+.platelet-halo {
+  fill: url(#platelet-halo-grad);
+}
+
+.platelet-body-shape {
+  fill: #fff3d6;
 }
 
 .overlay {

@@ -4,8 +4,10 @@
 import {
   clamp01,
   leak,
+  lumen,
   oxygen,
   flow,
+  pulse,
   PLATELET_SPAWN,
   WOUND_INITIAL,
 } from "./rules";
@@ -15,19 +17,21 @@ export const SVG_NS = "http://www.w3.org/2000/svg";
 
 export const VIEW_W = 1600;
 export const VIEW_H = 900;
-export const VESSEL_TOP = 380;
-export const VESSEL_BOTTOM = 520;
+
+const LUMEN_TOP = 400;
+const LUMEN_BOTTOM = 500;
+export const VESSEL_TOP = LUMEN_TOP;
+export const VESSEL_BOTTOM = LUMEN_BOTTOM;
 export const WOUND_X = 800;
 export const WOUND_Y = 450;
 
 const RBC_MAX = 40;
 const RBC_BASE_SPEED = 260;
 const RBC_SPAWN_INTERVAL = 0.12;
-const RBC_QUEUE_ZONE = 140;
+const RBC_QUEUE_ZONE = 220;
 
 const PLATELET_MAX_DRIFTING = 4;
 const PLATELET_BASE_SPEED = 90;
-export const PLATELET_RADIUS = 12;
 export const PLATELET_HIT_RADIUS = 34;
 
 const GLIDE_DURATION = 0.15;
@@ -36,9 +40,20 @@ const HINT_AMPLITUDE = 26;
 
 const FIBRIN_MAX = 5;
 const DRIP_PERIOD = 1.2;
+const SEAL_FLASH_DURATION = 0.35;
+
+const LUMEN_FULL: [number, number, number] = [184, 31, 46];
+const LUMEN_DEPLETED: [number, number, number] = [92, 68, 66];
 
 let rbcIdSeq = 0;
 let plateletIdSeq = 0;
+
+function lerpColor(a: [number, number, number], b: [number, number, number], t: number): string {
+  const r = Math.round(a[0] + (b[0] - a[0]) * t);
+  const g = Math.round(a[1] + (b[1] - a[1]) * t);
+  const bl = Math.round(a[2] + (b[2] - a[2]) * t);
+  return `rgb(${r}, ${g}, ${bl})`;
+}
 
 export type RBC = { id: number; x: number; y: number; laneOffset: number };
 
@@ -53,7 +68,7 @@ export type Platelet = {
   glideT: number;
 };
 
-export type Fibrin = { angle: number; length: number; bow: number };
+export type Fibrin = { angleA: number; angleB: number; bow: number };
 
 export type VisualState = {
   rbcs: RBC[];
@@ -65,6 +80,9 @@ export type VisualState = {
   hintActive: boolean;
   hintT: number;
   hintTargetId: number | null;
+  bloodStain: number;
+  sealFlashActive: boolean;
+  sealFlashT: number;
 };
 
 export function createVisualState(): VisualState {
@@ -78,13 +96,16 @@ export function createVisualState(): VisualState {
     hintActive: false,
     hintT: 0,
     hintTargetId: null,
+    bloodStain: 0,
+    sealFlashActive: false,
+    sealFlashT: 0,
   };
 }
 
 export function stepRBCs(visual: VisualState, gameState: GameState, dt: number) {
   const f = flow(gameState);
   const speed = RBC_BASE_SPEED * (0.15 + 0.85 * f);
-  const targetCount = Math.round(RBC_MAX * clamp01(0.35 + 0.65 * gameState.bloodVolume));
+  const targetCount = Math.round(RBC_MAX * clamp01(0.15 + 0.85 * gameState.bloodVolume));
 
   visual.rbcSpawnT += dt;
   while (visual.rbcSpawnT >= RBC_SPAWN_INTERVAL && visual.rbcs.length < targetCount) {
@@ -92,14 +113,14 @@ export function stepRBCs(visual: VisualState, gameState: GameState, dt: number) 
     visual.rbcs.push({
       id: rbcIdSeq++,
       x: -20,
-      y: VESSEL_TOP + 20 + Math.random() * (VESSEL_BOTTOM - VESSEL_TOP - 40),
+      y: LUMEN_TOP + 16 + Math.random() * (LUMEN_BOTTOM - LUMEN_TOP - 32),
       laneOffset: Math.random() * Math.PI * 2,
     });
   }
 
   for (const rbc of visual.rbcs) {
-    const nearWound = Math.abs(rbc.x - WOUND_X) < RBC_QUEUE_ZONE;
-    const localSpeed = nearWound ? speed * (0.25 + 0.75 * f) : speed;
+    const upstream = rbc.x < WOUND_X && WOUND_X - rbc.x < RBC_QUEUE_ZONE;
+    const localSpeed = upstream ? speed * (0.12 + 0.55 * f) : speed;
     rbc.x += localSpeed * dt;
   }
   visual.rbcs = visual.rbcs.filter((r) => r.x <= VIEW_W + 20);
@@ -113,7 +134,7 @@ export function stepPlateletsDrift(visual: VisualState, dt: number) {
     visual.platelets.push({
       id: plateletIdSeq++,
       x: -20,
-      y: VESSEL_TOP + 30 + Math.random() * (VESSEL_BOTTOM - VESSEL_TOP - 60),
+      y: LUMEN_TOP + 24 + Math.random() * (LUMEN_BOTTOM - LUMEN_TOP - 48),
       vx: PLATELET_BASE_SPEED * (0.8 + Math.random() * 0.4),
       wobblePhase: Math.random() * Math.PI * 2,
       state: "drifting",
@@ -170,13 +191,30 @@ export function stepAttaching(visual: VisualState, dt: number): number[] {
   return completed;
 }
 
+export function stepBloodStain(visual: VisualState, gameState: GameState, dt: number) {
+  const l = leak(gameState);
+  visual.bloodStain = clamp01(visual.bloodStain + l * 0.7 * dt - 0.06 * dt);
+}
+
+export function triggerSealFlash(visual: VisualState) {
+  visual.sealFlashActive = true;
+  visual.sealFlashT = 0;
+}
+
+export function stepSealFlash(visual: VisualState, dt: number) {
+  if (!visual.sealFlashActive) return;
+  visual.sealFlashT += dt;
+  if (visual.sealFlashT >= SEAL_FLASH_DURATION) {
+    visual.sealFlashActive = false;
+    visual.sealFlashT = 0;
+  }
+}
+
 export function addFibrinFor(visual: VisualState) {
   if (visual.fibrin.length >= FIBRIN_MAX) return;
-  visual.fibrin.push({
-    angle: Math.random() * Math.PI * 2,
-    length: 20 + Math.random() * 26,
-    bow: (Math.random() - 0.5) * 18,
-  });
+  const angleA = Math.random() * Math.PI * 2;
+  const angleB = angleA + Math.PI + (Math.random() - 0.5) * 1.1;
+  visual.fibrin.push({ angleA, angleB, bow: (Math.random() - 0.5) * 22 });
 }
 
 export function triggerIdleHint(visual: VisualState) {
@@ -198,18 +236,25 @@ export function triggerIdleHint(visual: VisualState) {
 }
 
 export type Refs = {
-  vessel: SVGRectElement;
-  tissue: SVGRectElement;
-  woundGap: SVGEllipseElement;
+  lumen: SVGRectElement;
+  tissue: SVGEllipseElement;
+  woundTear: SVGGElement;
   clotBulge: SVGCircleElement;
   fibrinGroup: SVGGElement;
   dripGroup: SVGGElement;
   rbcGroup: SVGGElement;
   plateletGroup: SVGGElement;
   idleGlow: SVGCircleElement;
+  sealFlash: SVGCircleElement;
+  bloodStain: SVGCircleElement;
 };
 
-function renderDrips(group: SVGGElement, els: SVGCircleElement[], leakValue: number, elapsed: number) {
+function renderDrips(
+  group: SVGGElement,
+  els: SVGCircleElement[],
+  leakValue: number,
+  elapsed: number,
+) {
   const count = Math.round(clamp01(leakValue / 0.5) * 5);
   while (els.length < count) {
     const c = document.createElementNS(SVG_NS, "circle");
@@ -224,25 +269,27 @@ function renderDrips(group: SVGGElement, els: SVGCircleElement[], leakValue: num
   els.forEach((c, i) => {
     const t = (elapsed / DRIP_PERIOD + i * 0.35) % 1;
     c.setAttribute("cx", String(WOUND_X - 18 + i * 9));
-    c.setAttribute("cy", String(WOUND_Y + 12 + t * 90));
+    c.setAttribute("cy", String(WOUND_Y + 15 + t * 140));
     c.setAttribute("opacity", String(clamp01(1 - t)));
   });
 }
 
-function renderFibrin(group: SVGGElement, els: SVGPathElement[], fibrin: Fibrin[]) {
+function renderFibrin(group: SVGGElement, els: SVGPathElement[], fibrin: Fibrin[], woundR: number) {
   while (els.length < fibrin.length) {
     const p = document.createElementNS(SVG_NS, "path");
     group.appendChild(p);
     els.push(p);
   }
+  const rEdge = woundR * 0.95;
   fibrin.forEach((f, i) => {
     const el = els[i];
-    const x1 = WOUND_X + Math.cos(f.angle) * 6;
-    const y1 = WOUND_Y + Math.sin(f.angle) * 6;
-    const x2 = WOUND_X + Math.cos(f.angle) * f.length;
-    const y2 = WOUND_Y + Math.sin(f.angle) * f.length;
-    const mx = (x1 + x2) / 2 + Math.cos(f.angle + Math.PI / 2) * f.bow;
-    const my = (y1 + y2) / 2 + Math.sin(f.angle + Math.PI / 2) * f.bow;
+    const x1 = WOUND_X + Math.cos(f.angleA) * rEdge;
+    const y1 = WOUND_Y + Math.sin(f.angleA) * rEdge;
+    const x2 = WOUND_X + Math.cos(f.angleB) * rEdge;
+    const y2 = WOUND_Y + Math.sin(f.angleB) * rEdge;
+    const mid = (f.angleA + f.angleB) / 2;
+    const mx = (x1 + x2) / 2 + Math.cos(mid + Math.PI / 2) * f.bow;
+    const my = (y1 + y2) / 2 + Math.sin(mid + Math.PI / 2) * f.bow;
     el.setAttribute("d", `M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}`);
   });
 }
@@ -269,43 +316,57 @@ function renderRBCs(group: SVGGElement, els: Map<number, SVGCircleElement>, rbcs
   }
 }
 
+type PlateletEls = { hit: SVGCircleElement; group: SVGGElement; halo: SVGCircleElement };
+
 function renderPlatelets(
   group: SVGGElement,
-  els: Map<number, { hit: SVGCircleElement; body: SVGCircleElement }>,
+  els: Map<number, PlateletEls>,
   platelets: Platelet[],
   hoveredId: number | null,
+  hintTargetId: number | null,
+  hintEnvelope: number,
 ) {
   const seen = new Set<number>();
   for (const p of platelets) {
     seen.add(p.id);
-    let pair = els.get(p.id);
-    if (!pair) {
+    let entry = els.get(p.id);
+    if (!entry) {
       const hit = document.createElementNS(SVG_NS, "circle");
       hit.setAttribute("r", String(PLATELET_HIT_RADIUS));
       hit.setAttribute("class", "platelet-hit");
-      const body = document.createElementNS(SVG_NS, "circle");
-      body.setAttribute("r", String(PLATELET_RADIUS));
-      body.setAttribute("class", "platelet-body");
+      const g = document.createElementNS(SVG_NS, "g");
+      g.setAttribute("class", "platelet-visual");
+      const halo = document.createElementNS(SVG_NS, "circle");
+      halo.setAttribute("r", "2.4");
+      halo.setAttribute("class", "platelet-halo");
+      const use = document.createElementNS(SVG_NS, "use");
+      use.setAttribute("href", "#platelet-shape");
+      use.setAttribute("class", "platelet-body-shape");
+      g.appendChild(halo);
+      g.appendChild(use);
       group.appendChild(hit);
-      group.appendChild(body);
-      pair = { hit, body };
-      els.set(p.id, pair);
+      group.appendChild(g);
+      entry = { hit, group: g, halo };
+      els.set(p.id, entry);
     }
-    pair.hit.setAttribute("cx", String(p.x));
-    pair.hit.setAttribute("cy", String(p.y));
-    pair.body.setAttribute("cx", String(p.x));
-    pair.body.setAttribute("cy", String(p.y));
+
+    entry.hit.setAttribute("cx", String(p.x));
+    entry.hit.setAttribute("cy", String(p.y));
+    entry.hit.setAttribute("pointer-events", p.state === "drifting" ? "auto" : "none");
 
     const hovered = hoveredId === p.id && p.state === "drifting";
-    const scale = p.state === "held" ? 1.25 : hovered ? 1.15 : 1;
-    pair.body.setAttribute("r", String(PLATELET_RADIUS * scale));
-    pair.body.setAttribute("opacity", p.state === "attached" ? "0" : "1");
-    pair.hit.setAttribute("pointer-events", p.state === "drifting" ? "auto" : "none");
+    const scale = p.state === "held" ? 7.5 : hovered ? 6.8 : 6;
+    entry.group.setAttribute("transform", `translate(${p.x},${p.y}) scale(${scale})`);
+    entry.group.setAttribute("opacity", p.state === "attached" ? "0" : "1");
+
+    let haloOpacity = p.state === "held" ? 0.55 : hovered ? 0.4 : 0.15;
+    if (p.id === hintTargetId) haloOpacity = Math.max(haloOpacity, 0.65 * hintEnvelope);
+    entry.halo.setAttribute("opacity", haloOpacity.toFixed(3));
   }
-  for (const [id, pair] of els) {
+  for (const [id, entry] of els) {
     if (!seen.has(id)) {
-      pair.hit.remove();
-      pair.body.remove();
+      entry.hit.remove();
+      entry.group.remove();
       els.delete(id);
     }
   }
@@ -313,31 +374,63 @@ function renderPlatelets(
 
 export function createRenderer(refs: Refs) {
   const rbcEls = new Map<number, SVGCircleElement>();
-  const plateletEls = new Map<number, { hit: SVGCircleElement; body: SVGCircleElement }>();
+  const plateletEls = new Map<number, PlateletEls>();
   const fibrinEls: SVGPathElement[] = [];
   const dripEls: SVGCircleElement[] = [];
 
   return function render(gameState: GameState, visual: VisualState) {
+    const bloodVol = clamp01(gameState.bloodVolume);
+    const lumenValue = lumen(gameState);
+    const occlusion = clamp01(1 - lumenValue);
     const leakValue = leak(gameState);
-    const oxygenValue = oxygen(gameState);
+    const oxygenValue = clamp01(oxygen(gameState));
+    const pulseValue = pulse(gameState.elapsed);
+    const pulseWobble = (pulseValue - 1) * bloodVol;
 
-    refs.vessel.setAttribute("opacity", (0.35 + 0.55 * clamp01(gameState.bloodVolume)).toFixed(3));
-    refs.tissue.setAttribute("opacity", (0.05 + 0.4 * clamp01(oxygenValue)).toFixed(3));
+    refs.lumen.setAttribute("fill", lerpColor(LUMEN_DEPLETED, LUMEN_FULL, bloodVol));
+    refs.lumen.setAttribute(
+      "opacity",
+      clamp01((0.55 + 0.35 * bloodVol) * (1 + 0.12 * pulseWobble)).toFixed(3),
+    );
 
-    const woundR = 10 + 46 * clamp01(gameState.woundSize / WOUND_INITIAL);
-    refs.woundGap.setAttribute("rx", woundR.toFixed(2));
-    refs.woundGap.setAttribute("ry", (woundR * 0.7).toFixed(2));
+    refs.tissue.setAttribute("opacity", (0.12 + 0.5 * oxygenValue).toFixed(3));
 
-    const clotAmount = clamp01(gameState.clot);
-    refs.clotBulge.setAttribute("r", (8 + 70 * clotAmount).toFixed(2));
-    refs.clotBulge.setAttribute("opacity", (0.55 + 0.35 * clotAmount).toFixed(3));
+    const woundRatio = clamp01(gameState.woundSize / WOUND_INITIAL);
+    const woundR = 9 + 46 * woundRatio;
+    refs.woundTear.setAttribute(
+      "transform",
+      `translate(${WOUND_X},${WOUND_Y}) scale(${woundR.toFixed(2)})`,
+    );
 
-    const glowT = visual.hintActive ? Math.sin(clamp01(visual.hintT / 0.5) * Math.PI) : 0;
-    refs.idleGlow.setAttribute("opacity", (0.5 * glowT).toFixed(3));
+    refs.clotBulge.setAttribute("r", (6 + 78 * occlusion).toFixed(2));
+    refs.clotBulge.setAttribute("opacity", (0.5 + 0.4 * occlusion).toFixed(3));
+
+    const hintEnvelope = visual.hintActive
+      ? Math.sin(clamp01(visual.hintT / HINT_DURATION) * Math.PI)
+      : 0;
+    refs.idleGlow.setAttribute("opacity", (0.5 * hintEnvelope).toFixed(3));
+
+    if (visual.sealFlashActive) {
+      const t = clamp01(visual.sealFlashT / SEAL_FLASH_DURATION);
+      refs.sealFlash.setAttribute("r", (20 + 70 * t).toFixed(2));
+      refs.sealFlash.setAttribute("opacity", ((1 - t) * 0.6).toFixed(3));
+    } else {
+      refs.sealFlash.setAttribute("opacity", "0");
+    }
+
+    refs.bloodStain.setAttribute("r", (30 + 60 * visual.bloodStain).toFixed(2));
+    refs.bloodStain.setAttribute("opacity", (visual.bloodStain * 0.5).toFixed(3));
 
     renderDrips(refs.dripGroup, dripEls, leakValue, gameState.elapsed);
-    renderFibrin(refs.fibrinGroup, fibrinEls, visual.fibrin);
+    renderFibrin(refs.fibrinGroup, fibrinEls, visual.fibrin, woundR);
     renderRBCs(refs.rbcGroup, rbcEls, visual.rbcs);
-    renderPlatelets(refs.plateletGroup, plateletEls, visual.platelets, visual.hoveredId);
+    renderPlatelets(
+      refs.plateletGroup,
+      plateletEls,
+      visual.platelets,
+      visual.hoveredId,
+      visual.hintTargetId,
+      hintEnvelope,
+    );
   };
 }
