@@ -56,11 +56,11 @@ import {
   RBC_BACK_SPEED_FACTOR,
   PLUME_MIN_REACH,
   PLUME_MAX_REACH,
-  PLUME_MIN_WIDTH,
-  PLUME_MAX_WIDTH,
+  PLUME_WIDTH_RATIO,
   PLUME_LEAK_NORM,
   PLUME_CORE_OPACITY,
   PLUME_CORE_WIDTH_RATIO,
+  PLUME_CORE_REACH_RATIO,
   POOL_BASE_RX,
   POOL_MAX_RX,
   POOL_RY,
@@ -375,11 +375,17 @@ function renderDrips(
   });
 }
 
+// A fan opening downward and outward from a point at the wound: narrow at
+// the top (the source), rounding out to a wide flat-ish bottom whose width
+// is roughly equal to its own height (reach) — a fan, not a cone.
 function plumePathD(x: number, y: number, width: number, reach: number): string {
+  const halfW = width / 2;
+  const bottomY = y + reach;
   return (
-    `M ${x - width * 0.15} ${y} ` +
-    `C ${x - width * 0.5} ${y + reach * 0.25} ${x - width * 0.35} ${y + reach * 0.7} ${x} ${y + reach} ` +
-    `C ${x + width * 0.35} ${y + reach * 0.7} ${x + width * 0.5} ${y + reach * 0.25} ${x + width * 0.15} ${y} Z`
+    `M ${x} ${y} ` +
+    `C ${x - halfW * 0.35} ${y + reach * 0.35} ${x - halfW * 0.85} ${y + reach * 0.75} ${x - halfW} ${bottomY} ` +
+    `Q ${x} ${bottomY + halfW * 0.25} ${x + halfW} ${bottomY} ` +
+    `C ${x + halfW * 0.85} ${y + reach * 0.75} ${x + halfW * 0.35} ${y + reach * 0.35} ${x} ${y} Z`
   );
 }
 
@@ -388,19 +394,21 @@ function plumePathD(x: number, y: number, width: number, reach: number): string 
 function renderPlume(el: SVGPathElement, leakValue: number) {
   const t = clamp01(leakValue / PLUME_LEAK_NORM);
   const reach = PLUME_MIN_REACH + (PLUME_MAX_REACH - PLUME_MIN_REACH) * t;
-  const width = PLUME_MIN_WIDTH + (PLUME_MAX_WIDTH - PLUME_MIN_WIDTH) * t;
+  const width = reach * PLUME_WIDTH_RATIO;
   el.setAttribute("d", plumePathD(WOUND_X, WOUND_Y, width, reach));
   el.setAttribute("opacity", (0.25 + 0.75 * t).toFixed(3));
 }
 
-// A narrower, brighter core nested inside the plume — same reach, tighter
+// A narrower, brighter core hugging the breach — a much shorter reach than
+// the outer plume (it doesn't extend the plume's full length) and a tighter
 // width, flat colour rather than the plume's fading gradient. Its own opacity
 // stays fixed at the reference's "#7a1119 @ .5"; the leak-driven fade lives
 // one level up, on bleedGroup (which wraps this and the outer plume).
 function renderPlumeCore(el: SVGPathElement, leakValue: number) {
   const t = clamp01(leakValue / PLUME_LEAK_NORM);
-  const reach = PLUME_MIN_REACH + (PLUME_MAX_REACH - PLUME_MIN_REACH) * t;
-  const width = (PLUME_MIN_WIDTH + (PLUME_MAX_WIDTH - PLUME_MIN_WIDTH) * t) * PLUME_CORE_WIDTH_RATIO;
+  const outerReach = PLUME_MIN_REACH + (PLUME_MAX_REACH - PLUME_MIN_REACH) * t;
+  const reach = outerReach * PLUME_CORE_REACH_RATIO;
+  const width = reach * PLUME_WIDTH_RATIO * PLUME_CORE_WIDTH_RATIO;
   el.setAttribute("d", plumePathD(WOUND_X, WOUND_Y, width, reach));
   el.setAttribute("opacity", PLUME_CORE_OPACITY.toFixed(3));
 }

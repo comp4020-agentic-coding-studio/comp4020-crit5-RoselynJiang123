@@ -257,18 +257,22 @@ export const COLOR_PLUME_NEAR = "#7a1119";
 export const COLOR_PLUME_FAR = "#5e0f16";
 export const PLUME_MIN_REACH = 40;
 export const PLUME_MAX_REACH = 260;
-export const PLUME_MIN_WIDTH = 26;
-export const PLUME_MAX_WIDTH = 40;
+// A fan, not a cone: width at the bottom tracks reach directly, so it always
+// comes out roughly equal to the plume's own height.
+export const PLUME_WIDTH_RATIO = 1;
 export const PLUME_LEAK_NORM = 0.35; // leak(state) value at which the plume is fully extended
 
 export const COLOR_PLUME_CORE = "#7a1119";
 export const PLUME_CORE_OPACITY = 0.5;
 export const PLUME_CORE_WIDTH_RATIO = 0.5; // narrower than the outer plume
+// A much shorter reach than the outer plume, so the core hugs the breach
+// itself rather than extending the full length of the plume.
+export const PLUME_CORE_REACH_RATIO = 0.55;
 
 export const COLOR_POOL = "#470b11";
 export const POOL_BASE_RX = 20;
 export const POOL_MAX_RX = 115; // rx = 20 + (1 - bloodVolume) * 95
-export const POOL_RY = 24;
+export const POOL_RY = 9;
 export const POOL_Y_OFFSET = 64;
 
 // Two or three detaching droplets remain as secondary detail alongside the
