@@ -136,18 +136,18 @@ export const PLATELET_MAX_DRIFTING = 4;
 export const PLATELET_BASE_SPEED = 90;
 // Twice the visual radius: the game has no tutorial, so the hit area must be
 // generous enough that the draggable object is trivially easy to grab.
-export const PLATELET_HIT_RADIUS = 18;
+export const PLATELET_HIT_RADIUS = 18 * REF_SCALE_Y;
 
 // PLATELET_SHAPE_PATH's own bounding radius is ~9 at scale 1 — this scale is
 // deliberately NOT anatomical (a platelet is not a fraction of a red cell's
 // size here): with no tutorial, the draggable object must be the most
 // salient thing on screen, so it renders slightly smaller than a red cell
 // (rx 12 / ry 10), not a sliver of one.
-export const PLATELET_BASE_SCALE = 1;
+export const PLATELET_BASE_SCALE = REF_SCALE_Y;
 export const PLATELET_HOVER_SCALE_MULT = 1.25;
 export const PLATELET_HELD_SCALE_MULT = 1.4;
 
-export const PLATELET_GLOW_BASE_RADIUS = 17;
+export const PLATELET_GLOW_BASE_RADIUS = 17 * REF_SCALE_Y;
 export const PLATELET_GLOW_OPACITY_BASE = 0.35;
 export const PLATELET_GLOW_OPACITY_HOVER = 0.7;
 
