@@ -27,6 +27,9 @@ import {
   WOUND_Y,
   breachGeom,
   wallSegment,
+  BREACH_DEPTH_RATIO,
+  BREACH_MAX_DEPTH,
+  BREACH_ASYMMETRY,
   BREACH_GLOW_RADIUS_RATIO,
   BREACH_GLOW_OPACITY_BASE,
   BREACH_GLOW_OPACITY_PULSE,
@@ -476,34 +479,44 @@ function renderFibrinMesh(group: SVGGElement, els: SVGPathElement[], clotValue: 
 // rather than a literal trace of the reference's control points (those
 // weren't recoverable verbatim), but built from the same breach geometry so
 // it always spans exactly the current gap.
+// A shallow, irregular tear, not a symmetric pocket: depth is capped to a
+// fraction of the opening width AND to the wall's own thickness (whichever is
+// smaller), so the dark interior always sits within the wall rather than
+// bulging below it. The two sides dip by different amounts and meet at
+// off-centre points, so the tear is never a mirrored pair.
 function breachInteriorPath(g: BreachGeom): string {
-  const midX = WOUND_X;
-  const baseY = Math.max(g.y0, g.y1);
-  const midY = baseY + g.half * 0.9;
+  const width = g.x1 - g.x0;
+  const depth = Math.min(width * BREACH_DEPTH_RATIO, BREACH_MAX_DEPTH);
+  const wallY = (g.y0 + g.y1) / 2;
+  const leftDeepX = g.x0 + width * 0.38;
+  const rightDeepX = g.x0 + width * 0.66;
+  const leftDeepY = wallY + depth * (1 - BREACH_ASYMMETRY);
+  const rightDeepY = wallY + depth * (1 + BREACH_ASYMMETRY * 0.6);
   return (
     `M${g.x0.toFixed(1)},${g.y0.toFixed(1)} ` +
-    `C${(g.x0 + g.half * 0.15).toFixed(1)},${(g.y0 + g.half * 0.7).toFixed(1)} ` +
-    `${(midX - g.half * 0.5).toFixed(1)},${midY.toFixed(1)} ${midX.toFixed(1)},${(midY + g.half * 0.15).toFixed(1)} ` +
-    `C${(midX + g.half * 0.5).toFixed(1)},${midY.toFixed(1)} ` +
-    `${(g.x1 - g.half * 0.15).toFixed(1)},${(g.y1 + g.half * 0.7).toFixed(1)} ${g.x1.toFixed(1)},${g.y1.toFixed(1)} ` +
-    `Q${midX.toFixed(1)},${(Math.min(g.y0, g.y1) - g.half * 0.12).toFixed(1)} ${g.x0.toFixed(1)},${g.y0.toFixed(1)} Z`
+    `Q${(g.x0 + width * 0.12).toFixed(1)},${(g.y0 + depth * 0.7).toFixed(1)} ${leftDeepX.toFixed(1)},${leftDeepY.toFixed(1)} ` +
+    `Q${WOUND_X.toFixed(1)},${(Math.max(leftDeepY, rightDeepY) + depth * 0.1).toFixed(1)} ${rightDeepX.toFixed(1)},${rightDeepY.toFixed(1)} ` +
+    `Q${(g.x1 - width * 0.12).toFixed(1)},${(g.y1 + depth * 0.7).toFixed(1)} ${g.x1.toFixed(1)},${g.y1.toFixed(1)} ` +
+    `Q${WOUND_X.toFixed(1)},${(Math.min(g.y0, g.y1) - depth * 0.2).toFixed(1)} ${g.x0.toFixed(1)},${g.y0.toFixed(1)} Z`
   );
 }
 
 // A small torn flap at one gap edge: thick where it tears from the wall,
 // tapering as it curls outward and down. dir is -1 for the left edge (curls
-// left-down), +1 for the right edge (curls right-down).
-function lipPath(x: number, y: number, dir: 1 | -1, half: number): string {
-  const len = half * 0.9;
-  const width = half * 0.55;
-  const tipX = x + dir * len * 0.6;
+// left-down), +1 for the right edge (curls right-down). lenMult/angleMult let
+// the two edges of one breach differ in reach and curl angle, since a real
+// tear is never a mirrored pair.
+function lipPath(x: number, y: number, dir: 1 | -1, half: number, lenMult = 1, angleMult = 1): string {
+  const len = half * 0.9 * lenMult;
+  const width = half * 0.55 * lenMult;
+  const tipX = x + dir * len * 0.6 * angleMult;
   const tipY = y + len * 0.9;
   return (
     `M${x.toFixed(1)},${y.toFixed(1)} ` +
-    `C${(x + dir * width * 0.3).toFixed(1)},${(y + len * 0.3).toFixed(1)} ` +
-    `${(x + dir * len * 0.7).toFixed(1)},${(y + len * 0.7).toFixed(1)} ${tipX.toFixed(1)},${tipY.toFixed(1)} ` +
-    `C${(x + dir * len * 0.35).toFixed(1)},${(y + len * 0.55).toFixed(1)} ` +
-    `${(x + dir * width * 0.15).toFixed(1)},${(y + len * 0.15).toFixed(1)} ${x.toFixed(1)},${y.toFixed(1)} Z`
+    `C${(x + dir * width * 0.3 * angleMult).toFixed(1)},${(y + len * 0.3).toFixed(1)} ` +
+    `${(x + dir * len * 0.7 * angleMult).toFixed(1)},${(y + len * 0.7).toFixed(1)} ${tipX.toFixed(1)},${tipY.toFixed(1)} ` +
+    `C${(x + dir * len * 0.35 * angleMult).toFixed(1)},${(y + len * 0.55).toFixed(1)} ` +
+    `${(x + dir * width * 0.15 * angleMult).toFixed(1)},${(y + len * 0.15).toFixed(1)} ${x.toFixed(1)},${y.toFixed(1)} Z`
   );
 }
 
@@ -532,8 +545,14 @@ function renderBreach(refs: Refs, woundSize: number, elapsed: number) {
   refs.endoBottomRight.setAttribute("d", rightWall);
 
   refs.breachInterior.setAttribute("d", breachInteriorPath(g));
-  refs.breachLipLeft.setAttribute("d", lipPath(g.x0, g.y0, -1, g.half));
-  refs.breachLipRight.setAttribute("d", lipPath(g.x1, g.y1, 1, g.half));
+  refs.breachLipLeft.setAttribute(
+    "d",
+    lipPath(g.x0, g.y0, -1, g.half, 1 - BREACH_ASYMMETRY * 0.5, 1 + BREACH_ASYMMETRY * 0.4),
+  );
+  refs.breachLipRight.setAttribute(
+    "d",
+    lipPath(g.x1, g.y1, 1, g.half, 1 + BREACH_ASYMMETRY * 0.5, 1 - BREACH_ASYMMETRY * 0.4),
+  );
 
   refs.breachGlow.setAttribute("cx", String(WOUND_X));
   refs.breachGlow.setAttribute("cy", ((g.y0 + g.y1) / 2).toFixed(1));

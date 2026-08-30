@@ -222,6 +222,15 @@ export const COLOR_TISSUE_BG = "#1d1013";
 export const COLOR_LUMEN_FILL = "#2b1418";
 export const COLOR_WALL_STROKE = "#4a2126";
 export const WALL_STROKE_WIDTH = 14 * REF_SCALE_Y;
+
+// A breach is a shallow, irregular tear through the wall, not a pocket
+// hanging below it: depth is capped both relative to the opening (well under
+// half the width) and in absolute terms (the wall's own thickness), so the
+// dark interior never bulges past the wall it tore through.
+export const BREACH_DEPTH_RATIO = 0.3; // depth <= 40% of opening width, kept well under that ceiling
+export const BREACH_MAX_DEPTH = WALL_STROKE_WIDTH;
+export const BREACH_ASYMMETRY = 0.22; // the two torn edges differ in reach and angle — never a mirrored pair
+
 export const COLOR_ENDOTHELIUM = "#c08287";
 export const ENDOTHELIUM_STROKE_WIDTH = 1.2;
 export const ENDOTHELIUM_OPACITY = 0.42;
