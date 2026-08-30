@@ -79,8 +79,10 @@ import {
   COLOR_PLATELET_ATTACHED,
   PLATELET_PILE_MAX,
   PLATELET_PILE_SCALE,
+  PLATELET_PILE_SPREAD,
   PLATELET_PSEUDOPOD_COUNT,
   PLATELET_PSEUDOPOD_LEN,
+  clotMoundPath,
 } from "../theme";
 
 export const SVG_NS = "http://www.w3.org/2000/svg";
@@ -333,7 +335,7 @@ export type Refs = {
   breachLipRight: SVGPathElement;
   breachGlow: SVGCircleElement;
   healingSeam: SVGPathElement;
-  clotBulge: SVGCircleElement;
+  clotBulge: SVGPathElement;
   plateletPileGroup: SVGGElement;
   fibrinGroup: SVGGElement;
   dripGroup: SVGGElement;
@@ -687,7 +689,12 @@ function renderPlatelets(
 // state": platelet pile count <- clot.
 const PILE_GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
-function renderPlateletPile(group: SVGGElement, els: SVGGElement[], clotValue: number) {
+function renderPlateletPile(
+  group: SVGGElement,
+  els: SVGGElement[],
+  clotValue: number,
+  clotHeight: number,
+) {
   const count = Math.min(PLATELET_PILE_MAX, Math.round(clamp01(clotValue) * PLATELET_PILE_MAX));
   while (els.length < count) {
     const g = document.createElementNS(SVG_NS, "g");
@@ -712,9 +719,16 @@ function renderPlateletPile(group: SVGGElement, els: SVGGElement[], clotValue: n
   }
   els.forEach((g, i) => {
     const angle = i * PILE_GOLDEN_ANGLE;
-    const radius = 6 + Math.sqrt(i / PLATELET_PILE_MAX) * 30;
-    const cx = WOUND_X + Math.cos(angle) * radius;
-    const cy = WOUND_Y + Math.sin(angle) * radius * 0.6;
+    const spreadFrac = Math.sqrt(i / PLATELET_PILE_MAX);
+    const dx = Math.cos(angle) * PLATELET_PILE_SPREAD * spreadFrac;
+    const cx = WOUND_X + dx;
+    const wallY = yBot(cx);
+    // Later blobs (higher i, further from the breach centre) sit progressively
+    // higher up the mound, following the same gaussian profile that shapes the
+    // mound itself — the pile climbs into the lumen, it doesn't just widen.
+    const intrusion = clotHeight * gauss(dx, CLOT_PROFILE_SPREAD);
+    const climb = ((i + 0.5) / PLATELET_PILE_MAX) * intrusion;
+    const cy = wallY - climb + Math.sin(angle) * 6;
     g.setAttribute(
       "transform",
       `translate(${cx.toFixed(1)},${cy.toFixed(1)}) rotate(${((angle * 180) / Math.PI).toFixed(1)}) scale(${PLATELET_PILE_SCALE})`,
@@ -758,9 +772,10 @@ export function createRenderer(refs: Refs) {
 
     renderBreach(refs, gameState.woundSize, gameState.elapsed);
 
-    refs.clotBulge.setAttribute("r", (6 + 78 * occlusion).toFixed(2));
+    const clotHeight = (1 - lumenValue) * LUMEN_HEIGHT;
+    refs.clotBulge.setAttribute("d", clotMoundPath(clotHeight));
     refs.clotBulge.setAttribute("opacity", (0.5 + 0.4 * occlusion).toFixed(3));
-    renderPlateletPile(refs.plateletPileGroup, pileEls, gameState.clot);
+    renderPlateletPile(refs.plateletPileGroup, pileEls, gameState.clot, clotHeight);
 
     const hintEnvelope = visual.hintActive
       ? Math.sin(clamp01(visual.hintT / HINT_DURATION) * Math.PI)
@@ -784,7 +799,6 @@ export function createRenderer(refs: Refs) {
     renderPlumeCore(refs.bleedCore, leakValue);
     renderPool(refs.bleedPool, bloodVol);
     renderFibrinMesh(refs.fibrinGroup, fibrinEls, gameState.clot);
-    const clotHeight = (1 - lumenValue) * LUMEN_HEIGHT;
     renderRBCs(refs.rbcBackGroup, rbcBackEls, visual.rbcsBack, clotHeight, "rbc-back", RBC_BACK_OPACITY);
     renderRBCs(refs.rbcGroup, rbcEls, visual.rbcs, clotHeight);
     renderPlatelets(

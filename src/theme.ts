@@ -155,6 +155,7 @@ export const PLATELET_GLOW_OPACITY_HOVER = 0.7;
 export const COLOR_PLATELET_ATTACHED = "#e6d4bb";
 export const PLATELET_PILE_MAX = 10; // one blob per 0.1 clot
 export const PLATELET_PILE_SCALE = 1;
+export const PLATELET_PILE_SPREAD = CLOT_PROFILE_SPREAD * 0.9;
 export const PLATELET_PSEUDOPOD_COUNT = 3;
 export const PLATELET_PSEUDOPOD_LEN = 5;
 
@@ -202,6 +203,30 @@ export const IDLE_GLOW_RADIUS = 90;
 export const COLOR_CLOT_BULGE = "#5c1b1b";
 export const SEAL_FLASH_STROKE_WIDTH = 3;
 export const STAIN_Y_OFFSET = 150;
+
+export const CLOT_MOUND_HALF_WIDTH = CLOT_PROFILE_SPREAD * 2.4;
+
+// The clot's visible intrusion into the lumen — a mound whose top follows the
+// exact same gaussian push used to raise red cells (clotHeight *
+// gauss(x - WOUND_X, CLOT_PROFILE_SPREAD), see renderRBCs), so the drawn clot
+// and the channel it visibly narrows can never disagree. Anchored on the
+// wall curve at its base, matching the breach it grows out of, and rising by
+// clotHeight at its peak (x = WOUND_X).
+export function clotMoundPath(clotHeight: number): string {
+  const half = CLOT_MOUND_HALF_WIDTH;
+  const x0 = WOUND_X - half;
+  const x1 = WOUND_X + half;
+  const step = half / 12;
+  let d = `M${x0.toFixed(1)},${yBot(x0).toFixed(1)}`;
+  for (let x = x0 + step; x <= x1; x += step) {
+    const y = yBot(x) - clotHeight * gauss(x - WOUND_X, CLOT_PROFILE_SPREAD);
+    d += ` L${x.toFixed(1)},${y.toFixed(1)}`;
+  }
+  for (let x = x1 - step; x >= x0; x -= step) {
+    d += ` L${x.toFixed(1)},${yBot(x).toFixed(1)}`;
+  }
+  return d + " Z";
+}
 
 // ---------- fibrin (woven mesh, both ends anchored in the clot mass) ----------
 // Count and reach both come straight from clot, so the mesh grows and
