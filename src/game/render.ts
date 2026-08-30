@@ -63,9 +63,6 @@ import {
   PLUME_MAX_REACH,
   PLUME_WIDTH_RATIO,
   PLUME_LEAK_NORM,
-  PLUME_CORE_OPACITY,
-  PLUME_CORE_WIDTH_RATIO,
-  PLUME_CORE_REACH_RATIO,
   POOL_BASE_RX,
   POOL_MAX_RX,
   POOL_RY,
@@ -345,7 +342,6 @@ export type Refs = {
   dripGroup: SVGGElement;
   bleedGroup: SVGGElement;
   bleedPlume: SVGPathElement;
-  bleedCore: SVGPathElement;
   bleedPool: SVGEllipseElement;
   rbcBackGroup: SVGGElement;
   rbcGroup: SVGGElement;
@@ -408,19 +404,6 @@ function renderPlume(el: SVGPathElement, leakValue: number) {
   el.setAttribute("opacity", (0.25 + 0.75 * t).toFixed(3));
 }
 
-// A narrower, brighter core hugging the breach — a much shorter reach than
-// the outer plume (it doesn't extend the plume's full length) and a tighter
-// width, flat colour rather than the plume's fading gradient. Its own opacity
-// stays fixed at the reference's "#7a1119 @ .5"; the leak-driven fade lives
-// one level up, on bleedGroup (which wraps this and the outer plume).
-function renderPlumeCore(el: SVGPathElement, leakValue: number) {
-  const t = clamp01(leakValue / PLUME_LEAK_NORM);
-  const outerReach = PLUME_MIN_REACH + (PLUME_MAX_REACH - PLUME_MIN_REACH) * t;
-  const reach = outerReach * PLUME_CORE_REACH_RATIO;
-  const width = reach * PLUME_WIDTH_RATIO * PLUME_CORE_WIDTH_RATIO;
-  el.setAttribute("d", plumePathD(WOUND_X, WOUND_Y, width, reach));
-  el.setAttribute("opacity", PLUME_CORE_OPACITY.toFixed(3));
-}
 
 // The pool IS the blood-loss gauge — its rx is driven directly by
 // (1 - bloodVolume), so no numeric blood-loss readout is ever needed.
@@ -811,7 +794,6 @@ export function createRenderer(refs: Refs) {
     renderDrips(refs.dripGroup, dripEls, leakValue, gameState.elapsed);
     refs.bleedGroup.setAttribute("opacity", clamp01(leakValue * 3).toFixed(3));
     renderPlume(refs.bleedPlume, leakValue);
-    renderPlumeCore(refs.bleedCore, leakValue);
     renderPool(refs.bleedPool, bloodVol);
     renderFibrinMesh(
       refs.fibrinGroup,

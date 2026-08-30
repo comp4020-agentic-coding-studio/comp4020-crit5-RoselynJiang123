@@ -47,7 +47,6 @@ const refs: Refs = {
   dripGroup: need<SVGGElement>("drip-group"),
   bleedGroup: need<SVGGElement>("bleed-group"),
   bleedPlume: need<SVGPathElement>("bleed-plume"),
-  bleedCore: need<SVGPathElement>("bleed-core"),
   bleedPool: need<SVGEllipseElement>("bleed-pool"),
   rbcBackGroup: need<SVGGElement>("rbc-back-group"),
   rbcGroup: need<SVGGElement>("rbc-group"),

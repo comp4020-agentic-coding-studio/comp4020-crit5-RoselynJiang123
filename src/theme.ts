@@ -331,23 +331,19 @@ export const HEALING_SEAM_STROKE_WIDTH = 2 * REF_SCALE_Y;
 // vanishes quickly once leak reaches 0. The pool is the persistent
 // blood-loss gauge instead: it stays exactly as long as blood stays lost,
 // so it keeps its own bloodVolume-driven opacity rather than fading with
-// leak. See "bind every visual to state": plume+core intensity <- leak;
+// leak. See "bind every visual to state": plume intensity <- leak;
 // pool width <- 1 - bloodVolume.
-export const COLOR_PLUME_NEAR = "#7a1119";
-export const COLOR_PLUME_FAR = "#5e0f16";
+// A soft fading plume only — no separate hard-edged core layer. Darker than
+// the in-vessel blood (COLOR_RBC_FALLBACK, #c42b2b) so the bleed always
+// reads as a shadowed loss of blood, never as a brighter shape on screen.
+export const COLOR_PLUME_NEAR = "#5e0f16";
+export const COLOR_PLUME_FAR = "#3d0a10";
 export const PLUME_MIN_REACH = 40;
 export const PLUME_MAX_REACH = 260;
 // A fan, not a cone: width at the bottom tracks reach directly, so it always
 // comes out roughly equal to the plume's own height.
 export const PLUME_WIDTH_RATIO = 1;
 export const PLUME_LEAK_NORM = 0.35; // leak(state) value at which the plume is fully extended
-
-export const COLOR_PLUME_CORE = "#7a1119";
-export const PLUME_CORE_OPACITY = 0.5;
-export const PLUME_CORE_WIDTH_RATIO = 0.5; // narrower than the outer plume
-// A much shorter reach than the outer plume, so the core hugs the breach
-// itself rather than extending the full length of the plume.
-export const PLUME_CORE_REACH_RATIO = 0.55;
 
 export const COLOR_POOL = "#470b11";
 export const POOL_BASE_RX = 20;
