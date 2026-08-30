@@ -8,10 +8,74 @@
 export const VIEW_W = 1600;
 export const VIEW_H = 900;
 
-export const LUMEN_TOP = 400;
-export const LUMEN_BOTTOM = 500;
-export const WOUND_X = 800;
-export const WOUND_Y = 450;
+// The visual reference's demo canvas is 600x300. Its geometry (wobble
+// amplitudes, stroke widths, gaussian spreads) is specified in that space;
+// these factors carry it into our actual 1600x900 viewBox without hand
+// re-deriving every constant. X-direction quantities (things measured along
+// the flow axis: gaussian spreads, breach half-widths) scale by REF_SCALE_X;
+// Y-direction quantities (heights, stroke widths, cell radii) scale by
+// REF_SCALE_Y — the two differ because our viewBox isn't the same aspect
+// ratio as the reference's.
+export const REF_SCALE_X = VIEW_W / 600;
+export const REF_SCALE_Y = VIEW_H / 300;
+
+// ---------- vessel lumen (sampled sine curves, not hand-written beziers) ----------
+// Sampling these functions into a polyline — instead of hand-writing bezier
+// wall paths — guarantees the drawn wall and the cells' vertical containment
+// bounds are the same curve. See CLOT-FLOW visual reference, Plate 04.
+export const LUMEN_TOP_CENTER = 82 * REF_SCALE_Y;
+export const LUMEN_BOTTOM_CENTER = 200 * REF_SCALE_Y;
+export const LUMEN_WOBBLE_AMPLITUDE = 9 * REF_SCALE_Y;
+export const LUMEN_TOP_PHASE = 0.5;
+export const LUMEN_BOTTOM_PHASE = 2.4;
+// ~39% of VIEW_H — the clot-driven narrowing of this band is the player's
+// only warning that the vessel is closing, so it must be visible at a glance.
+export const LUMEN_HEIGHT = LUMEN_BOTTOM_CENTER - LUMEN_TOP_CENTER;
+export const WALL_SAMPLE_STEP = 40; // ~40 samples across VIEW_W
+
+export function gauss(d: number, s: number): number {
+  return Math.exp(-(d * d) / (2 * s * s));
+}
+
+export function yTop(x: number): number {
+  return LUMEN_TOP_CENTER + LUMEN_WOBBLE_AMPLITUDE * Math.sin((x / VIEW_W) * 2 * Math.PI + LUMEN_TOP_PHASE);
+}
+export function yBot(x: number): number {
+  return LUMEN_BOTTOM_CENTER + LUMEN_WOBBLE_AMPLITUDE * Math.sin((x / VIEW_W) * 2 * Math.PI + LUMEN_BOTTOM_PHASE);
+}
+
+function sampledPath(fn: (x: number) => number): string {
+  let d = `M0,${fn(0).toFixed(1)}`;
+  for (let x = WALL_SAMPLE_STEP; x <= VIEW_W; x += WALL_SAMPLE_STEP) d += ` L${x},${fn(x).toFixed(1)}`;
+  return d;
+}
+
+// Static geometry (the intact upper wall, and the full lumen fill outline)
+// never changes at runtime, so it's computed once here rather than every
+// frame. The lower wall gains a real gap once woundSize > 0 (Step 2), so it
+// is recomputed per frame in the renderer instead of being a constant here.
+export const WALL_TOP_PATH = sampledPath(yTop);
+// Step 1 only: a single unbroken bottom wall. Step 2 replaces this with two
+// dynamically-recomputed segments either side of the breach gap.
+export const WALL_BOTTOM_PATH = sampledPath(yBot);
+export const LUMEN_PATH = (() => {
+  let d = `M0,${yTop(0).toFixed(1)}`;
+  for (let x = WALL_SAMPLE_STEP; x <= VIEW_W; x += WALL_SAMPLE_STEP) d += ` L${x},${yTop(x).toFixed(1)}`;
+  d += ` L${VIEW_W},${yBot(VIEW_W).toFixed(1)}`;
+  for (let x = VIEW_W - WALL_SAMPLE_STEP; x >= 0; x -= WALL_SAMPLE_STEP) d += ` L${x},${yBot(x).toFixed(1)}`;
+  return d + " Z";
+})();
+
+export const WOUND_X = VIEW_W / 2;
+// Derived from yBot(WOUND_X) so the wound always sits exactly on the sampled
+// lower wall curve, never independently placed.
+export const WOUND_Y = yBot(WOUND_X);
+
+// Gaussian spreads for the clot's two effects on cell motion: how far its
+// upward push (on the lower bound) and its upstream speed dip reach along x.
+export const CLOT_PROFILE_SPREAD = 58 * REF_SCALE_X;
+export const CONGESTION_SPREAD = 86 * REF_SCALE_X;
+export const CONGESTION_STRENGTH = 0.7; // local speed dips to (1 - 0.7) at clot=1, x=WOUND_X
 
 // ---------- red blood cells (foreground layer) ----------
 // Haematocrit is ~45% — a vessel is packed with cells that jostle each
@@ -20,7 +84,6 @@ export const WOUND_Y = 450;
 export const RBC_MAX = 90;
 export const RBC_BASE_SPEED = 260;
 export const RBC_SPAWN_INTERVAL = 0.12;
-export const RBC_QUEUE_ZONE = 220;
 // Biconcave-disc read: an off-centre radial gradient (see the "rbc" gradient
 // in index.astro) plus a flattened ellipse. rx/ry ratio and per-cell rotation
 // and size variance are what sell the disc — see CLOT-FLOW visual reference.
@@ -103,22 +166,12 @@ export const FIBRIN_GROUP_OPACITY = 0.9;
 export const COLOR_TISSUE_BG = "#1d1013";
 export const COLOR_LUMEN_FILL = "#2b1418";
 export const COLOR_WALL_STROKE = "#4a2126";
-export const WALL_STROKE_WIDTH = 13;
+export const WALL_STROKE_WIDTH = 14 * REF_SCALE_Y;
 export const COLOR_ENDOTHELIUM = "#c08287";
 export const ENDOTHELIUM_STROKE_WIDTH = 1.2;
 export const ENDOTHELIUM_OPACITY = 0.42;
 export const COLOR_VIGNETTE = "#050203";
 export const VIGNETTE_OPACITY = 0.7;
-
-// Gentle cubic-bezier curves, not straight lines — an artery wall is never
-// perfectly parallel. Wobble is baked into these paths at build time (they
-// are static geometry, not per-frame animation).
-export const VESSEL_TOP_PATH =
-  "M0,400 C320,388 533.3,412 800,400 C1066.7,388 1333.3,414 1600,400";
-export const VESSEL_BOTTOM_PATH =
-  "M0,500 C320,512 533.3,488 800,500 C1066.7,512 1333.3,488 1600,500";
-export const VESSEL_LUMEN_PATH =
-  `${VESSEL_TOP_PATH} L1600,500 C1333.3,488 1066.7,512 800,500 C533.3,488 320,512 0,500 Z`;
 
 export const WOUND_TEAR_SCALE = 28;
 

@@ -27,9 +27,9 @@ import {
   ENDOTHELIUM_OPACITY,
   COLOR_VIGNETTE,
   VIGNETTE_OPACITY,
-  VESSEL_TOP_PATH,
-  VESSEL_BOTTOM_PATH,
-  VESSEL_LUMEN_PATH,
+  WALL_TOP_PATH,
+  WALL_BOTTOM_PATH,
+  LUMEN_PATH,
   WOUND_TEAR_SCALE,
   WOUND_X,
   WOUND_Y,
@@ -62,7 +62,7 @@ import {
     >
       <defs>
         <clipPath id="lumen-clip">
-          <path d={VESSEL_LUMEN_PATH}></path>
+          <path d={LUMEN_PATH}></path>
         </clipPath>
         <radialGradient id="vignette-grad" cx="50%" cy="50%" r="70%">
           <stop offset="40%" stop-color={COLOR_VIGNETTE} stop-opacity="0"></stop>
@@ -107,7 +107,7 @@ import {
         opacity={TISSUE_ELLIPSE.opacity}
       />
 
-      <path id="vessel-lumen" d={VESSEL_LUMEN_PATH} fill={COLOR_LUMEN_FILL} />
+      <path id="vessel-lumen" d={LUMEN_PATH} fill={COLOR_LUMEN_FILL} />
 
       <g clip-path="url(#lumen-clip)">
         <g id="rbc-back-group" fill={COLOR_RBC_FALLBACK}></g>
@@ -115,28 +115,28 @@ import {
       </g>
 
       <path
-        d={VESSEL_TOP_PATH}
+        d={WALL_TOP_PATH}
         fill="none"
         stroke={COLOR_WALL_STROKE}
         stroke-width={WALL_STROKE_WIDTH}
         stroke-linecap="round"
       />
       <path
-        d={VESSEL_BOTTOM_PATH}
+        d={WALL_BOTTOM_PATH}
         fill="none"
         stroke={COLOR_WALL_STROKE}
         stroke-width={WALL_STROKE_WIDTH}
         stroke-linecap="round"
       />
       <path
-        d={VESSEL_TOP_PATH}
+        d={WALL_TOP_PATH}
         fill="none"
         stroke={COLOR_ENDOTHELIUM}
         stroke-width={ENDOTHELIUM_STROKE_WIDTH}
         opacity={ENDOTHELIUM_OPACITY}
       />
       <path
-        d={VESSEL_BOTTOM_PATH}
+        d={WALL_BOTTOM_PATH}
         fill="none"
         stroke={COLOR_ENDOTHELIUM}
         stroke-width={ENDOTHELIUM_STROKE_WIDTH}

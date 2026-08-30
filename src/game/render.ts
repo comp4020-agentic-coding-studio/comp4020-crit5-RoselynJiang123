@@ -15,14 +15,18 @@ import type { GameState } from "./rules";
 import {
   VIEW_W,
   VIEW_H,
-  LUMEN_TOP,
-  LUMEN_BOTTOM,
+  yTop,
+  yBot,
+  gauss,
+  LUMEN_HEIGHT,
+  CLOT_PROFILE_SPREAD,
+  CONGESTION_SPREAD,
+  CONGESTION_STRENGTH,
   WOUND_X,
   WOUND_Y,
   RBC_MAX,
   RBC_BASE_SPEED,
   RBC_SPAWN_INTERVAL,
-  RBC_QUEUE_ZONE,
   PLATELET_MAX_DRIFTING,
   PLATELET_BASE_SPEED,
   PLATELET_HIT_RADIUS,
@@ -56,8 +60,6 @@ import {
 export const SVG_NS = "http://www.w3.org/2000/svg";
 
 export { VIEW_W, VIEW_H, WOUND_X, WOUND_Y, PLATELET_HIT_RADIUS };
-export const VESSEL_TOP = LUMEN_TOP;
-export const VESSEL_BOTTOM = LUMEN_BOTTOM;
 
 let rbcIdSeq = 0;
 let plateletIdSeq = 0;
@@ -69,11 +71,14 @@ function lerpColor(a: [number, number, number], b: [number, number, number], t: 
   return `rgb(${r}, ${g}, ${bl})`;
 }
 
+// y is not stored: it is derived every frame from x, u and the current clot
+// profile, so the drawn cell and its containment bounds can never drift
+// apart. u is the cell's fixed fraction of the way from the lumen's top bound
+// to its (clot-raised) bottom bound, assigned once at spawn.
 export type RBC = {
   id: number;
   x: number;
-  y: number;
-  laneOffset: number;
+  u: number;
   rotation: number;
   rx: number;
   ry: number;
@@ -128,6 +133,13 @@ export function createVisualState(): VisualState {
   };
 }
 
+// Upstream congestion is a local speed field, not a fixed queue zone: cells
+// bunch up on their own wherever the gaussian dip (centred on the wound)
+// currently reaches, so it shrinks and moves exactly as the clot does.
+function congestionSlow(x: number, clot: number): number {
+  return 1 - CONGESTION_STRENGTH * clot * gauss(x - WOUND_X, CONGESTION_SPREAD);
+}
+
 export function stepRBCs(visual: VisualState, gameState: GameState, dt: number) {
   const f = flow(gameState);
   const speed = RBC_BASE_SPEED * (0.15 + 0.85 * f);
@@ -141,8 +153,7 @@ export function stepRBCs(visual: VisualState, gameState: GameState, dt: number) 
     visual.rbcs.push({
       id: rbcIdSeq++,
       x: -20,
-      y: LUMEN_TOP + 16 + Math.random() * (LUMEN_BOTTOM - LUMEN_TOP - 32),
-      laneOffset: Math.random() * Math.PI * 2,
+      u: Math.random(),
       rotation: Math.random() * 180,
       rx: ry * RBC_RX_RATIO,
       ry,
@@ -150,9 +161,7 @@ export function stepRBCs(visual: VisualState, gameState: GameState, dt: number) 
   }
 
   for (const rbc of visual.rbcs) {
-    const upstream = rbc.x < WOUND_X && WOUND_X - rbc.x < RBC_QUEUE_ZONE;
-    const localSpeed = upstream ? speed * (0.12 + 0.55 * f) : speed;
-    rbc.x += localSpeed * dt;
+    rbc.x += speed * congestionSlow(rbc.x, gameState.clot) * dt;
   }
   visual.rbcs = visual.rbcs.filter((r) => r.x <= VIEW_W + 20);
 }
@@ -174,8 +183,7 @@ export function stepRBCsBack(visual: VisualState, gameState: GameState, dt: numb
     visual.rbcsBack.push({
       id: rbcIdSeq++,
       x: -20,
-      y: LUMEN_TOP + 16 + Math.random() * (LUMEN_BOTTOM - LUMEN_TOP - 32),
-      laneOffset: Math.random() * Math.PI * 2,
+      u: Math.random(),
       rotation: Math.random() * 180,
       rx: ry * RBC_RX_RATIO,
       ry,
@@ -183,9 +191,7 @@ export function stepRBCsBack(visual: VisualState, gameState: GameState, dt: numb
   }
 
   for (const rbc of visual.rbcsBack) {
-    const upstream = rbc.x < WOUND_X && WOUND_X - rbc.x < RBC_QUEUE_ZONE;
-    const localSpeed = upstream ? speed * (0.12 + 0.55 * f) : speed;
-    rbc.x += localSpeed * dt;
+    rbc.x += speed * congestionSlow(rbc.x, gameState.clot) * dt;
   }
   visual.rbcsBack = visual.rbcsBack.filter((r) => r.x <= VIEW_W + 20);
 }
@@ -195,10 +201,11 @@ export function stepPlateletsDrift(visual: VisualState, dt: number) {
   const driftingCount = visual.platelets.filter((p) => p.state === "drifting").length;
   if (visual.plateletSpawnT >= PLATELET_SPAWN && driftingCount < PLATELET_MAX_DRIFTING) {
     visual.plateletSpawnT = 0;
+    const spawnX = -20;
     visual.platelets.push({
       id: plateletIdSeq++,
-      x: -20,
-      y: LUMEN_TOP + 24 + Math.random() * (LUMEN_BOTTOM - LUMEN_TOP - 48),
+      x: spawnX,
+      y: yTop(spawnX) + 24 + Math.random() * (yBot(spawnX) - yTop(spawnX) - 48),
       vx: PLATELET_BASE_SPEED * (0.8 + Math.random() * 0.4),
       wobblePhase: Math.random() * Math.PI * 2,
       state: "drifting",
@@ -391,10 +398,15 @@ function renderFibrin(group: SVGGElement, els: SVGPathElement[], fibrin: Fibrin[
   });
 }
 
+// Vertical placement comes straight from the same sampled curves the wall is
+// drawn from, plus the clot's gaussian upward push on the lower bound — never
+// a sine wobble independent of the wall. clotHeight is (1 - lumen(state)) *
+// LUMEN_HEIGHT, i.e. read from the rules selector, not recomputed here.
 function renderRBCs(
   group: SVGGElement,
   els: Map<number, SVGEllipseElement>,
   rbcs: RBC[],
+  clotHeight: number,
   gradientId: string = "rbc",
   opacity: number | null = null,
 ) {
@@ -411,8 +423,11 @@ function renderRBCs(
       group.appendChild(el);
       els.set(rbc.id, el);
     }
+    const top = yTop(rbc.x) + rbc.ry;
+    const bot = yBot(rbc.x) - rbc.ry - clotHeight * gauss(rbc.x - WOUND_X, CLOT_PROFILE_SPREAD);
+    const span = Math.max(rbc.ry, bot - top);
     const cx = rbc.x;
-    const cy = rbc.y + Math.sin(rbc.laneOffset + rbc.x * 0.02) * 4;
+    const cy = top + rbc.u * span;
     el.setAttribute("cx", String(cx));
     el.setAttribute("cy", String(cy));
     el.setAttribute("transform", `rotate(${rbc.rotation} ${cx} ${cy})`);
@@ -535,8 +550,9 @@ export function createRenderer(refs: Refs) {
     renderPlume(refs.bleedPlume, leakValue);
     renderPool(refs.bleedPool, bloodVol);
     renderFibrin(refs.fibrinGroup, fibrinEls, visual.fibrin, woundR);
-    renderRBCs(refs.rbcBackGroup, rbcBackEls, visual.rbcsBack, "rbc-back", RBC_BACK_OPACITY);
-    renderRBCs(refs.rbcGroup, rbcEls, visual.rbcs);
+    const clotHeight = (1 - lumenValue) * LUMEN_HEIGHT;
+    renderRBCs(refs.rbcBackGroup, rbcBackEls, visual.rbcsBack, clotHeight, "rbc-back", RBC_BACK_OPACITY);
+    renderRBCs(refs.rbcGroup, rbcEls, visual.rbcs, clotHeight);
     renderPlatelets(
       refs.plateletGroup,
       plateletEls,
