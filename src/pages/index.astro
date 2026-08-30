@@ -35,6 +35,14 @@ import {
   WOUND_Y,
   VIEW_W,
   VIEW_H,
+  COLOR_IDLE_GLOW,
+  IDLE_GLOW_RADIUS,
+  COLOR_CLOT_BULGE,
+  SEAL_FLASH_STROKE_WIDTH,
+  STAIN_Y_OFFSET,
+  COLOR_FIBRIN,
+  FIBRIN_STROKE_WIDTH,
+  FIBRIN_GROUP_OPACITY,
 } from "../theme";
 ---
 
@@ -135,12 +143,12 @@ import {
         opacity={ENDOTHELIUM_OPACITY}
       />
 
-      <circle id="blood-stain" cx={WOUND_X} cy="600" r="0" fill="url(#stain-grad)" opacity="0" />
+      <circle id="blood-stain" cx={WOUND_X} cy={WOUND_Y + STAIN_Y_OFFSET} r="0" fill="url(#stain-grad)" opacity="0" />
       <ellipse id="bleed-pool" cx={WOUND_X} cy={WOUND_Y} rx="0" ry="0" fill={COLOR_POOL} opacity="0" />
       <path id="bleed-plume" fill="url(#plume)" opacity="0" />
-      <circle id="idle-glow" cx={WOUND_X} cy={WOUND_Y} r="90" fill="#ff5b5b" opacity="0" />
-      <circle id="clot-bulge" cx={WOUND_X} cy={WOUND_Y} r="0" fill="#5c1b1b" opacity="0" />
-      <g id="fibrin-group" stroke="#f2d9c8" stroke-width="2.5" fill="none" opacity="0.9"></g>
+      <circle id="idle-glow" cx={WOUND_X} cy={WOUND_Y} r={IDLE_GLOW_RADIUS} fill={COLOR_IDLE_GLOW} opacity="0" />
+      <circle id="clot-bulge" cx={WOUND_X} cy={WOUND_Y} r="0" fill={COLOR_CLOT_BULGE} opacity="0" />
+      <g id="fibrin-group" stroke={COLOR_FIBRIN} stroke-width={FIBRIN_STROKE_WIDTH} fill="none" opacity={FIBRIN_GROUP_OPACITY}></g>
 
       <g id="wound-tear" transform={`translate(${WOUND_X},${WOUND_Y}) scale(${WOUND_TEAR_SCALE})`}>
         <path d="M -0.4,-0.95 L -0.05,-0.85 L -0.201,-0.618 Z" fill={COLOR_WOUND_DARK} opacity="0.9" />
@@ -151,7 +159,7 @@ import {
         />
       </g>
 
-      <circle id="seal-flash" cx={WOUND_X} cy={WOUND_Y} r="0" fill="none" stroke={COLOR_SEAL_FLASH_STROKE} stroke-width="3" opacity="0" />
+      <circle id="seal-flash" cx={WOUND_X} cy={WOUND_Y} r="0" fill="none" stroke={COLOR_SEAL_FLASH_STROKE} stroke-width={SEAL_FLASH_STROKE_WIDTH} opacity="0" />
 
       <g id="drip-group" fill={COLOR_DRIP}></g>
       <g id="platelet-group"></g>

@@ -85,6 +85,18 @@ export const PLATELET_SHAPE_PATH =
 
 export const TISSUE_ELLIPSE = { cx: 1250, cy: 450, rx: 380, ry: 260, opacity: 0.2 };
 
+// ---------- idle hint / clot occlusion / seal flash / blood stain ----------
+export const COLOR_IDLE_GLOW = "#ff5b5b";
+export const IDLE_GLOW_RADIUS = 90;
+export const COLOR_CLOT_BULGE = "#5c1b1b";
+export const SEAL_FLASH_STROKE_WIDTH = 3;
+export const STAIN_Y_OFFSET = 150;
+
+// ---------- fibrin (radiating strands, static styling) ----------
+export const COLOR_FIBRIN = "#f2d9c8";
+export const FIBRIN_STROKE_WIDTH = 2.5;
+export const FIBRIN_GROUP_OPACITY = 0.9;
+
 // ---------- vessel wall (organic outline) ----------
 // Background tissue reads as flesh, not empty space, only if it is dark and
 // warm rather than pure black. See CLOT-FLOW visual reference, Plate 04.
