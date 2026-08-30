@@ -341,6 +341,7 @@ export type Refs = {
   rbcBackGroup: SVGGElement;
   rbcGroup: SVGGElement;
   plateletGroup: SVGGElement;
+  plateletHeldGroup: SVGGElement;
   idleGlow: SVGCircleElement;
   sealFlash: SVGCircleElement;
   bloodStain: SVGCircleElement;
@@ -584,7 +585,8 @@ type PlateletEls = {
 };
 
 function renderPlatelets(
-  group: SVGGElement,
+  clippedGroup: SVGGElement,
+  heldGroup: SVGGElement,
   els: Map<number, PlateletEls>,
   platelets: Platelet[],
   hoveredId: number | null,
@@ -608,10 +610,19 @@ function renderPlatelets(
       use.setAttribute("fill", COLOR_PLATELET_BODY);
       g.appendChild(halo);
       g.appendChild(use);
-      group.appendChild(hit);
-      group.appendChild(g);
+      clippedGroup.appendChild(hit);
+      clippedGroup.appendChild(g);
       entry = { hit, group: g, halo, use };
       els.set(p.id, entry);
+    }
+
+    // Free platelets stay clipped to the lumen; the held platelet is the only
+    // one exempt (it must follow the cursor anywhere), so it alone lives in
+    // the unclipped sibling layer while held.
+    const targetGroup = p.state === "held" ? heldGroup : clippedGroup;
+    if (entry.hit.parentNode !== targetGroup) {
+      targetGroup.appendChild(entry.hit);
+      targetGroup.appendChild(entry.group);
     }
 
     entry.hit.setAttribute("cx", String(p.x));
@@ -751,6 +762,7 @@ export function createRenderer(refs: Refs) {
     renderRBCs(refs.rbcGroup, rbcEls, visual.rbcs, clotHeight);
     renderPlatelets(
       refs.plateletGroup,
+      refs.plateletHeldGroup,
       plateletEls,
       visual.platelets,
       visual.hoveredId,

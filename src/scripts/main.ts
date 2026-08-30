@@ -52,6 +52,7 @@ const refs: Refs = {
   rbcBackGroup: need<SVGGElement>("rbc-back-group"),
   rbcGroup: need<SVGGElement>("rbc-group"),
   plateletGroup: need<SVGGElement>("platelet-group"),
+  plateletHeldGroup: need<SVGGElement>("platelet-held-layer"),
   idleGlow: need<SVGCircleElement>("idle-glow"),
   sealFlash: need<SVGCircleElement>("seal-flash"),
   bloodStain: need<SVGCircleElement>("blood-stain"),

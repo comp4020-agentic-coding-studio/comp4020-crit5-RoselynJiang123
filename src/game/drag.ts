@@ -2,7 +2,9 @@
 // no game rules (see CLAUDE.md "Architecture (locked)").
 
 import type { Platelet } from "./render";
+import { yTop, yBot } from "../theme";
 
+const LUMEN_MARGIN = 24;
 const FAR_RADIUS = 260;
 const MED_RADIUS = 140;
 const SNAP_RADIUS = 60;
@@ -107,6 +109,11 @@ export function attachDragHandlers(deps: DragDeps) {
     } else {
       held.state = "drifting";
       held.vx = Math.abs(held.vx);
+      // The held platelet is the only one allowed outside the lumen; on
+      // release it returns to drifting inside it, same as every other one.
+      const top = yTop(held.x) + LUMEN_MARGIN;
+      const bot = yBot(held.x) - LUMEN_MARGIN;
+      held.y = Math.min(Math.max(held.y, top), bot);
     }
   }
 

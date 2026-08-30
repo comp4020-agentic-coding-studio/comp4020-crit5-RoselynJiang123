@@ -185,7 +185,8 @@ import {
       <circle id="seal-flash" cx={WOUND_X} cy={WOUND_Y} r="0" fill="none" stroke={COLOR_SEAL_FLASH_STROKE} stroke-width={SEAL_FLASH_STROKE_WIDTH} opacity="0" />
 
       <g id="drip-group" fill={COLOR_DRIP}></g>
-      <g id="platelet-group"></g>
+      <g id="platelet-group" clip-path="url(#lumen-clip)"></g>
+      <g id="platelet-held-layer"></g>
 
       <rect
         x="0"
