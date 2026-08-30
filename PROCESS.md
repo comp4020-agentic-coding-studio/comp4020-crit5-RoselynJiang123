@@ -1,9 +1,5 @@
 # Process overview
 
-<!-- TEMPLATE: this file is a shape to fill in, not a form. Replace everything
-     in it with your own overview, and delete this comment — `pnpm
-     check:evidence` will remind you if it's still here. -->
-
 A reading-guide to how the work came together --- a map to your process, not an
 essay about it. Markers read this file and follow its citations; they don't
 trawl the repo for evidence you didn't point at, so if a moment mattered, cite
@@ -17,45 +13,27 @@ cover every deliverable.
 
 ## What I built
 
-One paragraph: the thing, and the idea behind it.
+I built **CLOT / FLOW**, a one-mechanic browser game about balancing clotting against blood flow. Dragging platelets onto a torn vessel reduces bleeding but narrows the lumen: too little ends in `BLEEDING`, too much in `BLOCKED`, and a well-sealed wound reaches `STABLE`. I separated rules from rendering so tests protected correctness while playtesting judged legibility.
 
 ## The moments that mattered
 
-Three or four for an assignment; fewer is fine for a weekly prototype. Keep the
-list short so each moment has room to do all four jobs:
+### 1. I turned the brief into a harness before building
 
-1. **what happened** --- the problem, or the thing that went wrong
-2. **what you did instead of the obvious thing** --- the call you made, and why
-   it beat the obvious one
-3. **how you knew it was right** --- the check you ran, the viewport you looked
-   at, what you read before accepting the diff
-4. **the citation** --- a commit or commit range, a `CLAUDE.md` change, a check
-   that went from red to green, a prompt paired with the commit it produced
+The starter `CLAUDE.md` was generic, so I replaced it with project-specific constraints: no tutorial text, one drag mechanic, pure DOM-free rules, fixed marking viewports, and a scope ban. I committed the full design specification separately. This kept later agent prompts short and incremental.
 
-Jobs 2 and 3 are the ones the repo can't tell a reader on its own, so they're
-where the marks are. The strongest moments are the ones where a correction
-landed in the **harness** --- the standards and checks your work has to satisfy
---- rather than in a retry: a rule added to `CLAUDE.md`, a check wired up, an
-attempt thrown away. Retrying until it passes is the routine case, and changing
-what the work runs against is the skilled one.
+Evidence: [`7728d94`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-RoselynJiang123/commit/7728d94), [`7a2b708`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-RoselynJiang123/commit/7a2b708).
 
-Cite each moment as a link whose text is the commit hash or range and whose
-target is this repo's commit or compare URL, so a reader clicks straight to the
-evidence:
+### 2. Tests established the rule; play exposed the real failure
 
-- one commit: [`a1b2c3d`](https://github.com/YOUR-ORG/YOUR-REPO/commit/a1b2c3d)
-- a range:
-  [`a1b2c3d...e4f5a6b`](https://github.com/YOUR-ORG/YOUR-REPO/compare/a1b2c3d...e4f5a6b)
+I tested the central trade-off: one platelet must both reduce leak and narrow lumen. After the first playable loop, tests were green, but play showed the vessel looked abstract, bleeding reduction and wound closure were unclear, and both failure states lacked readable warning. The magnetic snap felt acceptable, so I kept it and redirected the next pass toward visual cause-and-effect.
 
-To pair a prompt with the commit it produced, quote the prompt (curated, not a
-full transcript) next to the citation:
+Evidence: [`38aa53c`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-RoselynJiang123/commit/38aa53c), [`6ed1b8f...88355b8`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-RoselynJiang123/compare/6ed1b8f...88355b8).
 
-> the prompt, verbatim
+### 3. I translated "too abstract" into concrete visual specifications
 
-Screenshots are welcome where one carries the verification better than a
-sentence does. Commit the file to this repo and link it with a **relative**
-path, which is what makes it render on GitHub: `![alt text](docs/before.png)`.
-Images don't count towards the word count and don't replace the citation.
+For the art pass I used a loop of implementation → screenshot → diagnosis → specification → implementation. Instead of asking for "more realistic" graphics, I specified vessel walls, biconcave red cells, an irregular tear, larger platelets, fibrin strands, visible bleeding, and a clot built from placed platelets that grows into the lumen. Granular commits kept each decision inspectable and reversible.
+
+Evidence: [`7c2ed29...ed6fce0`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-RoselynJiang123/compare/7c2ed29...ed6fce0).
 
 ## Before you ship
 
