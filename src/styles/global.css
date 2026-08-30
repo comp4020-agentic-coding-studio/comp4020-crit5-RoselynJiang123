@@ -1,16 +1,140 @@
+html,
 body {
   margin: 0;
-  padding: 2rem;
+  height: 100%;
+  background: #0a0203;
+  overflow: hidden;
+}
+
+body {
   font-family: system-ui, sans-serif;
-  line-height: 1.6;
-  color: #1a1a1a;
+}
+
+header.chrome {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 5;
+  opacity: 0.35;
+}
+
+header.chrome nav a {
+  color: #e8c9c9;
+  font-size: 0.75rem;
+  text-decoration: none;
 }
 
 main {
-  max-width: 40rem;
-  margin: 0 auto;
+  position: relative;
+  width: 100vw;
+  height: 100vh;
 }
 
-a {
-  color: #0b5fff;
+h1.title-flash {
+  position: absolute;
+  top: 8%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-weight: 300;
+  letter-spacing: 0.15em;
+  color: #f3d9d9;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+h1.title-flash.flash-in {
+  animation: title-fade 3.2s ease forwards;
+}
+
+h1.title-flash.fade-out {
+  animation: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+@keyframes title-fade {
+  0% {
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+#game {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  background: #0a0203;
+}
+
+.platelet-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.platelet-body {
+  fill: #f4e7c8;
+  pointer-events: none;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: rgba(6, 1, 2, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+  z-index: 10;
+}
+
+.overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.outcome-word {
+  margin: 0;
+  font-size: clamp(2rem, 8vw, 4rem);
+  letter-spacing: 0.2em;
+  color: #f6e2e2;
+}
+
+.outcome-score {
+  margin: 0;
+  font-size: clamp(1rem, 3vw, 1.5rem);
+  color: #d9a7a7;
+}
+
+#reset-btn {
+  font-size: clamp(2.5rem, 9vw, 4rem);
+  line-height: 1;
+  background: none;
+  border: 2px solid #f6e2e2;
+  border-radius: 50%;
+  color: #f6e2e2;
+  width: 3.5em;
+  height: 3.5em;
+  cursor: pointer;
+}
+
+#reset-btn:hover,
+#reset-btn:focus-visible {
+  background: rgba(246, 226, 226, 0.15);
 }

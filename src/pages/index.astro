@@ -2,19 +2,35 @@
 import Layout from "../layouts/Layout.astro";
 ---
 
-<Layout title="COMP4020 prototype">
-  <header>
+<Layout title="CLOT / FLOW" description="A one-mechanic clotting game.">
+  <header class="chrome">
     <nav aria-label="Primary">
       <a href="./">Home</a>
     </nav>
   </header>
   <main>
-    <h1>COMP4020 prototype</h1>
-    <p>
-      Replace this with your prototype. This week's brief is on the course
-      website; <code>spec/README.md</code> explains how the checks in this repo
-      relate to it.
-    </p>
+    <h1 id="title" class="title-flash">CLOT / FLOW</h1>
+    <svg
+      id="game"
+      viewBox={`0 0 1600 900`}
+      preserveAspectRatio="xMidYMid meet"
+      aria-hidden="true"
+    >
+      <rect id="tissue" x="800" y="0" width="800" height="900" fill="#ffd6aa" opacity="0.05" />
+      <rect id="vessel" x="0" y="380" width="1600" height="140" fill="#4a1418" opacity="0.6" />
+      <circle id="idle-glow" cx="800" cy="450" r="90" fill="#ff5b5b" opacity="0" />
+      <circle id="clot-bulge" cx="800" cy="450" r="0" fill="#5c1b1b" opacity="0" />
+      <g id="fibrin-group" stroke="#f2d9c8" stroke-width="2" fill="none" opacity="0.85"></g>
+      <ellipse id="wound-gap" cx="800" cy="450" rx="26" ry="18" fill="#2a0507" />
+      <g id="drip-group" fill="#8e1420"></g>
+      <g id="rbc-group" fill="#c42b2b"></g>
+      <g id="platelet-group"></g>
+    </svg>
+    <div id="outcome-overlay" class="overlay">
+      <p id="outcome-word" class="outcome-word"></p>
+      <p id="outcome-score" class="outcome-score"></p>
+      <button id="reset-btn" type="button" aria-label="Play again">↻</button>
+    </div>
   </main>
   <script src="../scripts/main.ts"></script>
 </Layout>
