@@ -240,9 +240,16 @@ export const BREACH_GLOW_OPACITY_PULSE = 0.5;
 export const COLOR_HEALING_SEAM = "#c08287";
 export const HEALING_SEAM_STROKE_WIDTH = 2 * REF_SCALE_Y;
 
-// ---------- bleeding (seeping plume + growing pool) ----------
-// The pool's rx is driven directly by (1 - bloodVolume) — it IS the
-// blood-loss gauge, so no numeric readout is ever drawn alongside it.
+// ---------- bleeding (welling plume + core + spreading pool) ----------
+// Three layers, not one red cone: a soft outer plume opening downward, a
+// narrower brighter welling core inside it, and a pool that spreads
+// sideways underneath. The plume+core assembly is the transient "actively
+// leaking" read — its group opacity is clamp(leak * 3, 0, 1), so it
+// vanishes quickly once leak reaches 0. The pool is the persistent
+// blood-loss gauge instead: it stays exactly as long as blood stays lost,
+// so it keeps its own bloodVolume-driven opacity rather than fading with
+// leak. See "bind every visual to state": plume+core intensity <- leak;
+// pool width <- 1 - bloodVolume.
 export const COLOR_PLUME_NEAR = "#7a1119";
 export const COLOR_PLUME_FAR = "#5e0f16";
 export const PLUME_MIN_REACH = 40;
@@ -251,12 +258,16 @@ export const PLUME_MIN_WIDTH = 26;
 export const PLUME_MAX_WIDTH = 40;
 export const PLUME_LEAK_NORM = 0.35; // leak(state) value at which the plume is fully extended
 
-export const COLOR_POOL = "#4d0c12";
-export const POOL_BASE_RX = 22;
-export const POOL_MAX_RX = 130;
+export const COLOR_PLUME_CORE = "#7a1119";
+export const PLUME_CORE_OPACITY = 0.5;
+export const PLUME_CORE_WIDTH_RATIO = 0.5; // narrower than the outer plume
+
+export const COLOR_POOL = "#470b11";
+export const POOL_BASE_RX = 20;
+export const POOL_MAX_RX = 115; // rx = 20 + (1 - bloodVolume) * 95
 export const POOL_RY = 24;
 export const POOL_Y_OFFSET = 64;
 
-// A couple of irregular droplets remain as secondary detail alongside the
-// plume/pool — not the primary bleeding read any more.
-export const DROPLET_MAX = 2;
+// Two or three detaching droplets remain as secondary detail alongside the
+// plume/core/pool — not the primary bleeding read any more.
+export const DROPLET_MAX = 3;

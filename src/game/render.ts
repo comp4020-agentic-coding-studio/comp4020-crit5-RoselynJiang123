@@ -59,6 +59,8 @@ import {
   PLUME_MIN_WIDTH,
   PLUME_MAX_WIDTH,
   PLUME_LEAK_NORM,
+  PLUME_CORE_OPACITY,
+  PLUME_CORE_WIDTH_RATIO,
   POOL_BASE_RX,
   POOL_MAX_RX,
   POOL_RY,
@@ -333,7 +335,9 @@ export type Refs = {
   plateletPileGroup: SVGGElement;
   fibrinGroup: SVGGElement;
   dripGroup: SVGGElement;
+  bleedGroup: SVGGElement;
   bleedPlume: SVGPathElement;
+  bleedCore: SVGPathElement;
   bleedPool: SVGEllipseElement;
   rbcBackGroup: SVGGElement;
   rbcGroup: SVGGElement;
@@ -371,20 +375,34 @@ function renderDrips(
   });
 }
 
-// A seeping plume opening downward from the wound — width and reach both
+function plumePathD(x: number, y: number, width: number, reach: number): string {
+  return (
+    `M ${x - width * 0.15} ${y} ` +
+    `C ${x - width * 0.5} ${y + reach * 0.25} ${x - width * 0.35} ${y + reach * 0.7} ${x} ${y + reach} ` +
+    `C ${x + width * 0.35} ${y + reach * 0.7} ${x + width * 0.5} ${y + reach * 0.25} ${x + width * 0.15} ${y} Z`
+  );
+}
+
+// A welling plume opening downward from the wound — width and reach both
 // track leak(state) every frame, never a fixed-duration animation.
 function renderPlume(el: SVGPathElement, leakValue: number) {
   const t = clamp01(leakValue / PLUME_LEAK_NORM);
   const reach = PLUME_MIN_REACH + (PLUME_MAX_REACH - PLUME_MIN_REACH) * t;
   const width = PLUME_MIN_WIDTH + (PLUME_MAX_WIDTH - PLUME_MIN_WIDTH) * t;
-  const x = WOUND_X;
-  const y = WOUND_Y;
-  const d =
-    `M ${x - width * 0.15} ${y} ` +
-    `C ${x - width * 0.5} ${y + reach * 0.25} ${x - width * 0.35} ${y + reach * 0.7} ${x} ${y + reach} ` +
-    `C ${x + width * 0.35} ${y + reach * 0.7} ${x + width * 0.5} ${y + reach * 0.25} ${x + width * 0.15} ${y} Z`;
-  el.setAttribute("d", d);
+  el.setAttribute("d", plumePathD(WOUND_X, WOUND_Y, width, reach));
   el.setAttribute("opacity", (0.25 + 0.75 * t).toFixed(3));
+}
+
+// A narrower, brighter core nested inside the plume — same reach, tighter
+// width, flat colour rather than the plume's fading gradient. Its own opacity
+// stays fixed at the reference's "#7a1119 @ .5"; the leak-driven fade lives
+// one level up, on bleedGroup (which wraps this and the outer plume).
+function renderPlumeCore(el: SVGPathElement, leakValue: number) {
+  const t = clamp01(leakValue / PLUME_LEAK_NORM);
+  const reach = PLUME_MIN_REACH + (PLUME_MAX_REACH - PLUME_MIN_REACH) * t;
+  const width = (PLUME_MIN_WIDTH + (PLUME_MAX_WIDTH - PLUME_MIN_WIDTH) * t) * PLUME_CORE_WIDTH_RATIO;
+  el.setAttribute("d", plumePathD(WOUND_X, WOUND_Y, width, reach));
+  el.setAttribute("opacity", PLUME_CORE_OPACITY.toFixed(3));
 }
 
 // The pool IS the blood-loss gauge — its rx is driven directly by
@@ -725,7 +743,9 @@ export function createRenderer(refs: Refs) {
     refs.bloodStain.setAttribute("opacity", (visual.bloodStain * 0.5).toFixed(3));
 
     renderDrips(refs.dripGroup, dripEls, leakValue, gameState.elapsed);
+    refs.bleedGroup.setAttribute("opacity", clamp01(leakValue * 3).toFixed(3));
     renderPlume(refs.bleedPlume, leakValue);
+    renderPlumeCore(refs.bleedCore, leakValue);
     renderPool(refs.bleedPool, bloodVol);
     renderFibrinMesh(refs.fibrinGroup, fibrinEls, gameState.clot);
     const clotHeight = (1 - lumenValue) * LUMEN_HEIGHT;
