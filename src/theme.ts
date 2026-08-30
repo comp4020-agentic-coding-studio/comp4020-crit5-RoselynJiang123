@@ -131,6 +131,27 @@ export const PLATELET_MAX_DRIFTING = 4;
 export const PLATELET_BASE_SPEED = 90;
 export const PLATELET_HIT_RADIUS = 34;
 
+// Body scale is independent of PLATELET_HIT_RADIUS (constraint: never change
+// hit areas/drag behaviour) — chosen so the drawn blob keeps roughly the same
+// footprint the old triangle had inside that same hit circle.
+export const PLATELET_BASE_SCALE = 0.7;
+export const PLATELET_HOVER_SCALE_MULT = 1.25;
+export const PLATELET_HELD_SCALE_MULT = 1.4;
+
+export const PLATELET_GLOW_BASE_RADIUS = 9;
+export const PLATELET_GLOW_RADIUS_MULT = 1.2;
+export const PLATELET_GLOW_OPACITY_BASE = 0.35;
+export const PLATELET_GLOW_OPACITY_HOVER = 0.7;
+
+// Once attached, individual platelet elements are hidden — they read
+// visually as the platelet-pile blobs stacked at the wound instead. See
+// "bind every visual to state": platelet pile count <- clot.
+export const COLOR_PLATELET_ATTACHED = "#e6d4bb";
+export const PLATELET_PILE_MAX = 10; // one blob per 0.1 clot
+export const PLATELET_PILE_SCALE = 0.55;
+export const PLATELET_PSEUDOPOD_COUNT = 3;
+export const PLATELET_PSEUDOPOD_LEN = 5;
+
 // ---------- timings ----------
 export const GLIDE_DURATION = 0.15;
 export const HINT_DURATION = 0.5;
@@ -153,7 +174,7 @@ export const COLOR_RBC_FALLBACK = "#c42b2b";
 
 // Platelets read as the interactive object precisely because they are NOT
 // red — keep them pale and warm, distinct from every red-cell colour above.
-export const COLOR_PLATELET_BODY = "#f4e5d1";
+export const COLOR_PLATELET_BODY = "#f6e8d4";
 export const COLOR_PLATELET_HALO = "#ffc794";
 
 // Red-cell biconcave-disc gradient: off-centre origin + central pallor.
@@ -161,8 +182,10 @@ export const COLOR_RBC_CORE = "#d4696c";
 export const COLOR_RBC_MID = "#a83036";
 export const COLOR_RBC_RIM = "#7d1a20";
 
+// Irregular cell blob, not a geometric triangle — see CLOT-FLOW visual
+// reference, Plate 02.
 export const PLATELET_SHAPE_PATH =
-  "M 1,0 L 0.35,0.606 L -0.525,0.909 L -0.75,0 L -0.55,-0.953 L 0.325,-0.563 Z";
+  "M-8.5,-2.5 C-8,-7 -3.5,-9.6 1,-8.8 C6,-8 9.2,-4.5 8.8,0.5 C8.4,5.6 4.5,8.8 -0.5,8.6 C-5.6,8.4 -9,5 -8.5,-2.5 Z";
 
 export const TISSUE_ELLIPSE = { cx: 1250, cy: 450, rx: 380, ry: 260, opacity: 0.2 };
 

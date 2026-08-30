@@ -43,6 +43,7 @@ const refs: Refs = {
   breachGlow: need<SVGCircleElement>("breach-glow"),
   healingSeam: need<SVGPathElement>("healing-seam"),
   clotBulge: need<SVGCircleElement>("clot-bulge"),
+  plateletPileGroup: need<SVGGElement>("platelet-pile"),
   fibrinGroup: need<SVGGElement>("fibrin-group"),
   dripGroup: need<SVGGElement>("drip-group"),
   bleedPlume: need<SVGPathElement>("bleed-plume"),

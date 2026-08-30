@@ -61,6 +61,19 @@ import {
   POOL_RY,
   POOL_Y_OFFSET,
   DROPLET_MAX,
+  PLATELET_BASE_SCALE,
+  PLATELET_HOVER_SCALE_MULT,
+  PLATELET_HELD_SCALE_MULT,
+  PLATELET_GLOW_BASE_RADIUS,
+  PLATELET_GLOW_RADIUS_MULT,
+  PLATELET_GLOW_OPACITY_BASE,
+  PLATELET_GLOW_OPACITY_HOVER,
+  COLOR_PLATELET_BODY,
+  COLOR_PLATELET_ATTACHED,
+  PLATELET_PILE_MAX,
+  PLATELET_PILE_SCALE,
+  PLATELET_PSEUDOPOD_COUNT,
+  PLATELET_PSEUDOPOD_LEN,
 } from "../theme";
 
 export const SVG_NS = "http://www.w3.org/2000/svg";
@@ -325,6 +338,7 @@ export type Refs = {
   breachGlow: SVGCircleElement;
   healingSeam: SVGPathElement;
   clotBulge: SVGCircleElement;
+  plateletPileGroup: SVGGElement;
   fibrinGroup: SVGGElement;
   dripGroup: SVGGElement;
   bleedPlume: SVGPathElement;
@@ -529,7 +543,12 @@ function renderRBCs(
   }
 }
 
-type PlateletEls = { hit: SVGCircleElement; group: SVGGElement; halo: SVGCircleElement };
+type PlateletEls = {
+  hit: SVGCircleElement;
+  group: SVGGElement;
+  halo: SVGCircleElement;
+  use: SVGUseElement;
+};
 
 function renderPlatelets(
   group: SVGGElement,
@@ -550,16 +569,15 @@ function renderPlatelets(
       const g = document.createElementNS(SVG_NS, "g");
       g.setAttribute("class", "platelet-visual");
       const halo = document.createElementNS(SVG_NS, "circle");
-      halo.setAttribute("r", "2.4");
       halo.setAttribute("class", "platelet-halo");
       const use = document.createElementNS(SVG_NS, "use");
       use.setAttribute("href", "#platelet-shape");
-      use.setAttribute("class", "platelet-body-shape");
+      use.setAttribute("fill", COLOR_PLATELET_BODY);
       g.appendChild(halo);
       g.appendChild(use);
       group.appendChild(hit);
       group.appendChild(g);
-      entry = { hit, group: g, halo };
+      entry = { hit, group: g, halo, use };
       els.set(p.id, entry);
     }
 
@@ -568,11 +586,18 @@ function renderPlatelets(
     entry.hit.setAttribute("pointer-events", p.state === "drifting" ? "auto" : "none");
 
     const hovered = hoveredId === p.id && p.state === "drifting";
-    const scale = p.state === "held" ? 7.5 : hovered ? 6.8 : 6;
-    entry.group.setAttribute("transform", `translate(${p.x},${p.y}) scale(${scale})`);
+    const held = p.state === "held";
+    entry.group.setAttribute("transform", `translate(${p.x},${p.y})`);
     entry.group.setAttribute("opacity", p.state === "attached" ? "0" : "1");
 
-    let haloOpacity = p.state === "held" ? 0.55 : hovered ? 0.4 : 0.15;
+    const bodyScale =
+      PLATELET_BASE_SCALE * (held ? PLATELET_HELD_SCALE_MULT : hovered ? PLATELET_HOVER_SCALE_MULT : 1);
+    entry.use.setAttribute("transform", `scale(${bodyScale.toFixed(3)})`);
+
+    const glowScale = held || hovered ? PLATELET_GLOW_RADIUS_MULT : 1;
+    entry.halo.setAttribute("r", (PLATELET_GLOW_BASE_RADIUS * glowScale).toFixed(2));
+
+    let haloOpacity = held || hovered ? PLATELET_GLOW_OPACITY_HOVER : PLATELET_GLOW_OPACITY_BASE;
     if (p.id === hintTargetId) haloOpacity = Math.max(haloOpacity, 0.65 * hintEnvelope);
     entry.halo.setAttribute("opacity", haloOpacity.toFixed(3));
   }
@@ -585,12 +610,64 @@ function renderPlatelets(
   }
 }
 
+// Attached platelets read as a pile of blobs stacked at the wound, not as
+// individually-visible dots — count is driven straight from clot (one blob
+// per 0.1), positions are a fixed golden-angle spiral so the pile never
+// reshuffles as blobs are added or removed. See "bind every visual to
+// state": platelet pile count <- clot.
+const PILE_GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
+
+function renderPlateletPile(group: SVGGElement, els: SVGGElement[], clotValue: number) {
+  const count = Math.min(PLATELET_PILE_MAX, Math.round(clamp01(clotValue) * PLATELET_PILE_MAX));
+  while (els.length < count) {
+    const g = document.createElementNS(SVG_NS, "g");
+    const use = document.createElementNS(SVG_NS, "use");
+    use.setAttribute("href", "#platelet-shape");
+    use.setAttribute("fill", COLOR_PLATELET_ATTACHED);
+    g.appendChild(use);
+    for (let k = 0; k < PLATELET_PSEUDOPOD_COUNT; k++) {
+      const pod = document.createElementNS(SVG_NS, "path");
+      pod.setAttribute("stroke", COLOR_PLATELET_ATTACHED);
+      pod.setAttribute("stroke-width", "1.6");
+      pod.setAttribute("stroke-linecap", "round");
+      pod.setAttribute("opacity", "0.75");
+      pod.setAttribute("fill", "none");
+      g.appendChild(pod);
+    }
+    group.appendChild(g);
+    els.push(g);
+  }
+  while (els.length > count) {
+    els.pop()!.remove();
+  }
+  els.forEach((g, i) => {
+    const angle = i * PILE_GOLDEN_ANGLE;
+    const radius = 6 + Math.sqrt(i / PLATELET_PILE_MAX) * 30;
+    const cx = WOUND_X + Math.cos(angle) * radius;
+    const cy = WOUND_Y + Math.sin(angle) * radius * 0.6;
+    g.setAttribute(
+      "transform",
+      `translate(${cx.toFixed(1)},${cy.toFixed(1)}) rotate(${((angle * 180) / Math.PI).toFixed(1)}) scale(${PLATELET_PILE_SCALE})`,
+    );
+    for (let k = 0; k < PLATELET_PSEUDOPOD_COUNT; k++) {
+      const pod = g.children[k + 1] as SVGPathElement;
+      const podAngle = (k / PLATELET_PSEUDOPOD_COUNT) * Math.PI * 2 + angle;
+      const x1 = Math.cos(podAngle) * 8;
+      const y1 = Math.sin(podAngle) * 8;
+      const x2 = Math.cos(podAngle) * (8 + PLATELET_PSEUDOPOD_LEN);
+      const y2 = Math.sin(podAngle) * (8 + PLATELET_PSEUDOPOD_LEN);
+      pod.setAttribute("d", `M${x1.toFixed(1)},${y1.toFixed(1)} L${x2.toFixed(1)},${y2.toFixed(1)}`);
+    }
+  });
+}
+
 export function createRenderer(refs: Refs) {
   const rbcBackEls = new Map<number, SVGEllipseElement>();
   const rbcEls = new Map<number, SVGEllipseElement>();
   const plateletEls = new Map<number, PlateletEls>();
   const fibrinEls: SVGPathElement[] = [];
   const dripEls: SVGEllipseElement[] = [];
+  const pileEls: SVGGElement[] = [];
 
   return function render(gameState: GameState, visual: VisualState) {
     const bloodVol = clamp01(gameState.bloodVolume);
@@ -615,6 +692,7 @@ export function createRenderer(refs: Refs) {
 
     refs.clotBulge.setAttribute("r", (6 + 78 * occlusion).toFixed(2));
     refs.clotBulge.setAttribute("opacity", (0.5 + 0.4 * occlusion).toFixed(3));
+    renderPlateletPile(refs.plateletPileGroup, pileEls, gameState.clot);
 
     const hintEnvelope = visual.hintActive
       ? Math.sin(clamp01(visual.hintT / HINT_DURATION) * Math.PI)

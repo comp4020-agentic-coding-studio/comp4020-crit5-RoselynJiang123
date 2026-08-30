@@ -78,7 +78,7 @@ import {
           <stop offset="100%" stop-color={COLOR_STAIN} stop-opacity="0"></stop>
         </radialGradient>
         <radialGradient id="platelet-halo-grad" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color={COLOR_PLATELET_HALO} stop-opacity="0.9"></stop>
+          <stop offset="0%" stop-color={COLOR_PLATELET_HALO} stop-opacity="0.5"></stop>
           <stop offset="100%" stop-color={COLOR_PLATELET_HALO} stop-opacity="0"></stop>
         </radialGradient>
         <path id="platelet-shape" d={PLATELET_SHAPE_PATH}></path>
@@ -173,6 +173,7 @@ import {
       <path id="bleed-plume" fill="url(#plume)" opacity="0" />
       <circle id="idle-glow" cx={WOUND_X} cy={WOUND_Y} r={IDLE_GLOW_RADIUS} fill={COLOR_IDLE_GLOW} opacity="0" />
       <circle id="clot-bulge" cx={WOUND_X} cy={WOUND_Y} r="0" fill={COLOR_CLOT_BULGE} opacity="0" />
+      <g id="platelet-pile"></g>
       <g id="fibrin-group" stroke={COLOR_FIBRIN} stroke-width={FIBRIN_STROKE_WIDTH} fill="none" opacity={FIBRIN_GROUP_OPACITY}></g>
 
       <circle id="seal-flash" cx={WOUND_X} cy={WOUND_Y} r="0" fill="none" stroke={COLOR_SEAL_FLASH_STROKE} stroke-width={SEAL_FLASH_STROKE_WIDTH} opacity="0" />

@@ -91,17 +91,12 @@ h1.title-flash.fade-out {
 }
 
 .platelet-visual,
-.platelet-halo,
-.platelet-body-shape {
+.platelet-halo {
   pointer-events: none;
 }
 
 .platelet-halo {
   fill: url(#platelet-halo-grad);
-}
-
-.platelet-body-shape {
-  fill: #f4e5d1;
 }
 
 .overlay {
