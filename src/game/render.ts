@@ -34,6 +34,9 @@ import {
   SEAL_FLASH_DURATION,
   LUMEN_FULL,
   LUMEN_DEPLETED,
+  RBC_BASE_RY,
+  RBC_RX_RATIO,
+  RBC_SIZE_VARIANCE,
 } from "../theme";
 
 export const SVG_NS = "http://www.w3.org/2000/svg";
@@ -52,7 +55,15 @@ function lerpColor(a: [number, number, number], b: [number, number, number], t: 
   return `rgb(${r}, ${g}, ${bl})`;
 }
 
-export type RBC = { id: number; x: number; y: number; laneOffset: number };
+export type RBC = {
+  id: number;
+  x: number;
+  y: number;
+  laneOffset: number;
+  rotation: number;
+  rx: number;
+  ry: number;
+};
 
 export type Platelet = {
   id: number;
@@ -107,11 +118,16 @@ export function stepRBCs(visual: VisualState, gameState: GameState, dt: number) 
   visual.rbcSpawnT += dt;
   while (visual.rbcSpawnT >= RBC_SPAWN_INTERVAL && visual.rbcs.length < targetCount) {
     visual.rbcSpawnT -= RBC_SPAWN_INTERVAL;
+    const variance = 1 + (Math.random() * 2 - 1) * RBC_SIZE_VARIANCE;
+    const ry = RBC_BASE_RY * variance;
     visual.rbcs.push({
       id: rbcIdSeq++,
       x: -20,
       y: LUMEN_TOP + 16 + Math.random() * (LUMEN_BOTTOM - LUMEN_TOP - 32),
       laneOffset: Math.random() * Math.PI * 2,
+      rotation: Math.random() * 180,
+      rx: ry * RBC_RX_RATIO,
+      ry,
     });
   }
 
@@ -291,19 +307,24 @@ function renderFibrin(group: SVGGElement, els: SVGPathElement[], fibrin: Fibrin[
   });
 }
 
-function renderRBCs(group: SVGGElement, els: Map<number, SVGCircleElement>, rbcs: RBC[]) {
+function renderRBCs(group: SVGGElement, els: Map<number, SVGEllipseElement>, rbcs: RBC[]) {
   const seen = new Set<number>();
   for (const rbc of rbcs) {
     seen.add(rbc.id);
     let el = els.get(rbc.id);
     if (!el) {
-      el = document.createElementNS(SVG_NS, "circle");
-      el.setAttribute("r", "6");
+      el = document.createElementNS(SVG_NS, "ellipse");
+      el.setAttribute("rx", String(rbc.rx));
+      el.setAttribute("ry", String(rbc.ry));
+      el.setAttribute("fill", "url(#rbc)");
       group.appendChild(el);
       els.set(rbc.id, el);
     }
-    el.setAttribute("cx", String(rbc.x));
-    el.setAttribute("cy", String(rbc.y + Math.sin(rbc.laneOffset + rbc.x * 0.02) * 4));
+    const cx = rbc.x;
+    const cy = rbc.y + Math.sin(rbc.laneOffset + rbc.x * 0.02) * 4;
+    el.setAttribute("cx", String(cx));
+    el.setAttribute("cy", String(cy));
+    el.setAttribute("transform", `rotate(${rbc.rotation} ${cx} ${cy})`);
   }
   for (const [id, el] of els) {
     if (!seen.has(id)) {
@@ -370,7 +391,7 @@ function renderPlatelets(
 }
 
 export function createRenderer(refs: Refs) {
-  const rbcEls = new Map<number, SVGCircleElement>();
+  const rbcEls = new Map<number, SVGEllipseElement>();
   const plateletEls = new Map<number, PlateletEls>();
   const fibrinEls: SVGPathElement[] = [];
   const dripEls: SVGCircleElement[] = [];

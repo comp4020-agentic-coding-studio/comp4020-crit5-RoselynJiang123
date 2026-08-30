@@ -12,6 +12,9 @@ import {
   COLOR_SEAL_FLASH_STROKE,
   COLOR_DRIP,
   COLOR_RBC_FALLBACK,
+  COLOR_RBC_CORE,
+  COLOR_RBC_MID,
+  COLOR_RBC_RIM,
   PLATELET_SHAPE_PATH,
   TISSUE_ELLIPSE,
   VESSEL_WALL_PATH,
@@ -54,6 +57,11 @@ import {
           <stop offset="100%" stop-color={COLOR_PLATELET_HALO} stop-opacity="0"></stop>
         </radialGradient>
         <path id="platelet-shape" d={PLATELET_SHAPE_PATH}></path>
+        <radialGradient id="rbc" cx="42%" cy="38%" r="62%">
+          <stop offset="0%" stop-color={COLOR_RBC_CORE}></stop>
+          <stop offset="45%" stop-color={COLOR_RBC_MID}></stop>
+          <stop offset="100%" stop-color={COLOR_RBC_RIM}></stop>
+        </radialGradient>
       </defs>
 
       <ellipse

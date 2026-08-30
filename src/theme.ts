@@ -18,6 +18,12 @@ export const RBC_MAX = 40;
 export const RBC_BASE_SPEED = 260;
 export const RBC_SPAWN_INTERVAL = 0.12;
 export const RBC_QUEUE_ZONE = 220;
+// Biconcave-disc read: an off-centre radial gradient (see the "rbc" gradient
+// in index.astro) plus a flattened ellipse. rx/ry ratio and per-cell rotation
+// and size variance are what sell the disc — see CLOT-FLOW visual reference.
+export const RBC_BASE_RY = 6;
+export const RBC_RX_RATIO = 1.15;
+export const RBC_SIZE_VARIANCE = 0.15; // ±15%, assigned once at spawn
 
 // ---------- platelets ----------
 export const PLATELET_MAX_DRIFTING = 4;
@@ -43,13 +49,22 @@ export const COLOR_WALL_TOP = "#7a2b30";
 export const COLOR_WALL_BOTTOM = "#2f0f13";
 export const COLOR_TISSUE_GLOW = "#ffd9a8";
 export const COLOR_STAIN = "#5a0d14";
-export const COLOR_PLATELET_HALO = "#fff3d6";
 export const COLOR_LUMEN_RECT = "#8a1420";
 export const COLOR_WOUND_DARK = "#3a0f14";
 export const COLOR_WOUND_DARKEST = "#170305";
 export const COLOR_SEAL_FLASH_STROKE = "#fff3d6";
 export const COLOR_DRIP = "#8e1420";
 export const COLOR_RBC_FALLBACK = "#c42b2b";
+
+// Platelets read as the interactive object precisely because they are NOT
+// red — keep them pale and warm, distinct from every red-cell colour above.
+export const COLOR_PLATELET_BODY = "#f4e5d1";
+export const COLOR_PLATELET_HALO = "#ffc794";
+
+// Red-cell biconcave-disc gradient: off-centre origin + central pallor.
+export const COLOR_RBC_CORE = "#d4696c";
+export const COLOR_RBC_MID = "#a83036";
+export const COLOR_RBC_RIM = "#7d1a20";
 
 export const PLATELET_SHAPE_PATH =
   "M 1,0 L 0.35,0.606 L -0.525,0.909 L -0.75,0 L -0.55,-0.953 L 0.325,-0.563 Z";
