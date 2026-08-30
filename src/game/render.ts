@@ -70,7 +70,6 @@ import {
   PLATELET_HOVER_SCALE_MULT,
   PLATELET_HELD_SCALE_MULT,
   PLATELET_GLOW_BASE_RADIUS,
-  PLATELET_GLOW_RADIUS_MULT,
   PLATELET_GLOW_OPACITY_BASE,
   PLATELET_GLOW_OPACITY_HOVER,
   COLOR_PLATELET_BODY,
@@ -628,8 +627,7 @@ function renderPlatelets(
       PLATELET_BASE_SCALE * (held ? PLATELET_HELD_SCALE_MULT : hovered ? PLATELET_HOVER_SCALE_MULT : 1);
     entry.use.setAttribute("transform", `scale(${bodyScale.toFixed(3)})`);
 
-    const glowScale = held || hovered ? PLATELET_GLOW_RADIUS_MULT : 1;
-    entry.halo.setAttribute("r", (PLATELET_GLOW_BASE_RADIUS * glowScale).toFixed(2));
+    entry.halo.setAttribute("r", String(PLATELET_GLOW_BASE_RADIUS));
 
     let haloOpacity = held || hovered ? PLATELET_GLOW_OPACITY_HOVER : PLATELET_GLOW_OPACITY_BASE;
     if (p.id === hintTargetId) haloOpacity = Math.max(haloOpacity, 0.65 * hintEnvelope);

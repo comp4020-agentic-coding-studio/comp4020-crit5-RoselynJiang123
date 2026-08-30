@@ -132,17 +132,20 @@ export const COLOR_RBC_BACK_FAR = "#3a1015";
 // ---------- platelets ----------
 export const PLATELET_MAX_DRIFTING = 4;
 export const PLATELET_BASE_SPEED = 90;
-export const PLATELET_HIT_RADIUS = 34;
+// Twice the visual radius: the game has no tutorial, so the hit area must be
+// generous enough that the draggable object is trivially easy to grab.
+export const PLATELET_HIT_RADIUS = 18;
 
-// Body scale is independent of PLATELET_HIT_RADIUS (constraint: never change
-// hit areas/drag behaviour) — chosen so the drawn blob keeps roughly the same
-// footprint the old triangle had inside that same hit circle.
-export const PLATELET_BASE_SCALE = 0.7;
+// PLATELET_SHAPE_PATH's own bounding radius is ~9 at scale 1 — this scale is
+// deliberately NOT anatomical (a platelet is not a fraction of a red cell's
+// size here): with no tutorial, the draggable object must be the most
+// salient thing on screen, so it renders slightly smaller than a red cell
+// (rx 12 / ry 10), not a sliver of one.
+export const PLATELET_BASE_SCALE = 1;
 export const PLATELET_HOVER_SCALE_MULT = 1.25;
 export const PLATELET_HELD_SCALE_MULT = 1.4;
 
-export const PLATELET_GLOW_BASE_RADIUS = 9;
-export const PLATELET_GLOW_RADIUS_MULT = 1.2;
+export const PLATELET_GLOW_BASE_RADIUS = 17;
 export const PLATELET_GLOW_OPACITY_BASE = 0.35;
 export const PLATELET_GLOW_OPACITY_HOVER = 0.7;
 
@@ -151,7 +154,7 @@ export const PLATELET_GLOW_OPACITY_HOVER = 0.7;
 // "bind every visual to state": platelet pile count <- clot.
 export const COLOR_PLATELET_ATTACHED = "#e6d4bb";
 export const PLATELET_PILE_MAX = 10; // one blob per 0.1 clot
-export const PLATELET_PILE_SCALE = 0.55;
+export const PLATELET_PILE_SCALE = 1;
 export const PLATELET_PSEUDOPOD_COUNT = 3;
 export const PLATELET_PSEUDOPOD_LEN = 5;
 
