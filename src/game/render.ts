@@ -37,6 +37,10 @@ import {
   RBC_BASE_RY,
   RBC_RX_RATIO,
   RBC_SIZE_VARIANCE,
+  RBC_BACK_MAX,
+  RBC_BACK_SCALE,
+  RBC_BACK_OPACITY,
+  RBC_BACK_SPEED_FACTOR,
 } from "../theme";
 
 export const SVG_NS = "http://www.w3.org/2000/svg";
@@ -80,10 +84,12 @@ export type Fibrin = { angleA: number; angleB: number; bow: number };
 
 export type VisualState = {
   rbcs: RBC[];
+  rbcsBack: RBC[];
   platelets: Platelet[];
   fibrin: Fibrin[];
   hoveredId: number | null;
   rbcSpawnT: number;
+  rbcBackSpawnT: number;
   plateletSpawnT: number;
   hintActive: boolean;
   hintT: number;
@@ -96,10 +102,12 @@ export type VisualState = {
 export function createVisualState(): VisualState {
   return {
     rbcs: [],
+    rbcsBack: [],
     platelets: [],
     fibrin: [],
     hoveredId: null,
     rbcSpawnT: 0,
+    rbcBackSpawnT: 0,
     plateletSpawnT: 0,
     hintActive: false,
     hintT: 0,
@@ -137,6 +145,39 @@ export function stepRBCs(visual: VisualState, gameState: GameState, dt: number) 
     rbc.x += localSpeed * dt;
   }
   visual.rbcs = visual.rbcs.filter((r) => r.x <= VIEW_W + 20);
+}
+
+// Background depth layer: smaller, dimmer, slower — driven by the same
+// flow(state) signal as the foreground so the "flow is slowing" cue reads at
+// both depths, never a fixed-duration animation. See CLAUDE.md and
+// CLOT-FLOW visual reference, Plate 03.
+export function stepRBCsBack(visual: VisualState, gameState: GameState, dt: number) {
+  const f = flow(gameState);
+  const speed = RBC_BASE_SPEED * RBC_BACK_SPEED_FACTOR * (0.15 + 0.85 * f);
+  const targetCount = Math.round(RBC_BACK_MAX * clamp01(0.15 + 0.85 * gameState.bloodVolume));
+
+  visual.rbcBackSpawnT += dt;
+  while (visual.rbcBackSpawnT >= RBC_SPAWN_INTERVAL && visual.rbcsBack.length < targetCount) {
+    visual.rbcBackSpawnT -= RBC_SPAWN_INTERVAL;
+    const variance = 1 + (Math.random() * 2 - 1) * RBC_SIZE_VARIANCE;
+    const ry = RBC_BASE_RY * RBC_BACK_SCALE * variance;
+    visual.rbcsBack.push({
+      id: rbcIdSeq++,
+      x: -20,
+      y: LUMEN_TOP + 16 + Math.random() * (LUMEN_BOTTOM - LUMEN_TOP - 32),
+      laneOffset: Math.random() * Math.PI * 2,
+      rotation: Math.random() * 180,
+      rx: ry * RBC_RX_RATIO,
+      ry,
+    });
+  }
+
+  for (const rbc of visual.rbcsBack) {
+    const upstream = rbc.x < WOUND_X && WOUND_X - rbc.x < RBC_QUEUE_ZONE;
+    const localSpeed = upstream ? speed * (0.12 + 0.55 * f) : speed;
+    rbc.x += localSpeed * dt;
+  }
+  visual.rbcsBack = visual.rbcsBack.filter((r) => r.x <= VIEW_W + 20);
 }
 
 export function stepPlateletsDrift(visual: VisualState, dt: number) {
@@ -255,6 +296,7 @@ export type Refs = {
   clotBulge: SVGCircleElement;
   fibrinGroup: SVGGElement;
   dripGroup: SVGGElement;
+  rbcBackGroup: SVGGElement;
   rbcGroup: SVGGElement;
   plateletGroup: SVGGElement;
   idleGlow: SVGCircleElement;
@@ -307,7 +349,13 @@ function renderFibrin(group: SVGGElement, els: SVGPathElement[], fibrin: Fibrin[
   });
 }
 
-function renderRBCs(group: SVGGElement, els: Map<number, SVGEllipseElement>, rbcs: RBC[]) {
+function renderRBCs(
+  group: SVGGElement,
+  els: Map<number, SVGEllipseElement>,
+  rbcs: RBC[],
+  gradientId: string = "rbc",
+  opacity: number | null = null,
+) {
   const seen = new Set<number>();
   for (const rbc of rbcs) {
     seen.add(rbc.id);
@@ -316,7 +364,8 @@ function renderRBCs(group: SVGGElement, els: Map<number, SVGEllipseElement>, rbc
       el = document.createElementNS(SVG_NS, "ellipse");
       el.setAttribute("rx", String(rbc.rx));
       el.setAttribute("ry", String(rbc.ry));
-      el.setAttribute("fill", "url(#rbc)");
+      el.setAttribute("fill", `url(#${gradientId})`);
+      if (opacity !== null) el.setAttribute("opacity", String(opacity));
       group.appendChild(el);
       els.set(rbc.id, el);
     }
@@ -391,6 +440,7 @@ function renderPlatelets(
 }
 
 export function createRenderer(refs: Refs) {
+  const rbcBackEls = new Map<number, SVGEllipseElement>();
   const rbcEls = new Map<number, SVGEllipseElement>();
   const plateletEls = new Map<number, PlateletEls>();
   const fibrinEls: SVGPathElement[] = [];
@@ -441,6 +491,7 @@ export function createRenderer(refs: Refs) {
 
     renderDrips(refs.dripGroup, dripEls, leakValue, gameState.elapsed);
     renderFibrin(refs.fibrinGroup, fibrinEls, visual.fibrin, woundR);
+    renderRBCs(refs.rbcBackGroup, rbcBackEls, visual.rbcsBack, "rbc-back", RBC_BACK_OPACITY);
     renderRBCs(refs.rbcGroup, rbcEls, visual.rbcs);
     renderPlatelets(
       refs.plateletGroup,

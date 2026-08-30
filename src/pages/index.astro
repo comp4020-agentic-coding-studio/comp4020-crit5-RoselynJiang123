@@ -15,6 +15,8 @@ import {
   COLOR_RBC_CORE,
   COLOR_RBC_MID,
   COLOR_RBC_RIM,
+  COLOR_RBC_BACK_NEAR,
+  COLOR_RBC_BACK_FAR,
   PLATELET_SHAPE_PATH,
   TISSUE_ELLIPSE,
   VESSEL_WALL_PATH,
@@ -62,6 +64,10 @@ import {
           <stop offset="45%" stop-color={COLOR_RBC_MID}></stop>
           <stop offset="100%" stop-color={COLOR_RBC_RIM}></stop>
         </radialGradient>
+        <radialGradient id="rbc-back" cx="42%" cy="38%" r="62%">
+          <stop offset="0%" stop-color={COLOR_RBC_BACK_NEAR}></stop>
+          <stop offset="100%" stop-color={COLOR_RBC_BACK_FAR}></stop>
+        </radialGradient>
       </defs>
 
       <ellipse
@@ -103,6 +109,7 @@ import {
       <circle id="seal-flash" cx={WOUND_X} cy={WOUND_Y} r="0" fill="none" stroke={COLOR_SEAL_FLASH_STROKE} stroke-width="3" opacity="0" />
 
       <g id="drip-group" fill={COLOR_DRIP}></g>
+      <g id="rbc-back-group" fill={COLOR_RBC_FALLBACK}></g>
       <g id="rbc-group" fill={COLOR_RBC_FALLBACK}></g>
       <g id="platelet-group"></g>
     </svg>

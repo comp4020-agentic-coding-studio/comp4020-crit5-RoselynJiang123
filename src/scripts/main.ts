@@ -13,6 +13,7 @@ import {
   stepBloodStain,
   stepPlateletsDrift,
   stepRBCs,
+  stepRBCsBack,
   stepSealFlash,
   triggerIdleHint,
   triggerSealFlash,
@@ -36,6 +37,7 @@ const refs: Refs = {
   clotBulge: need<SVGCircleElement>("clot-bulge"),
   fibrinGroup: need<SVGGElement>("fibrin-group"),
   dripGroup: need<SVGGElement>("drip-group"),
+  rbcBackGroup: need<SVGGElement>("rbc-back-group"),
   rbcGroup: need<SVGGElement>("rbc-group"),
   plateletGroup: need<SVGGElement>("platelet-group"),
   idleGlow: need<SVGCircleElement>("idle-glow"),
@@ -134,6 +136,7 @@ function frame(t: number) {
   if (!paused) {
     gameState = updateGame(gameState, dt);
     stepRBCs(visual, gameState, dt);
+    stepRBCsBack(visual, gameState, dt);
     stepPlateletsDrift(visual, dt);
     const completed = stepAttaching(visual, dt);
     for (const _id of completed) {

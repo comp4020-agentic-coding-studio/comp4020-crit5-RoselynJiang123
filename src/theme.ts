@@ -32,6 +32,17 @@ export const RBC_SIZE_VARIANCE = 0.15; // ±15%, assigned once at spawn
 // slow tab / low framerate can never accumulate past a bounded ellipse count.
 export const RBC_TOTAL_CAP = 140;
 
+// ---------- red blood cells (background layer, depth) ----------
+// Depth reads through size, brightness and speed alone — no blur filter is
+// applied to this (or any) per-frame-moving layer. Background count is
+// derived from the cap so foreground + background can never exceed it.
+export const RBC_BACK_MAX = RBC_TOTAL_CAP - RBC_MAX;
+export const RBC_BACK_SCALE = 0.6;
+export const RBC_BACK_OPACITY = 0.38;
+export const RBC_BACK_SPEED_FACTOR = 0.55;
+export const COLOR_RBC_BACK_NEAR = "#7a3034";
+export const COLOR_RBC_BACK_FAR = "#3f1015";
+
 // ---------- platelets ----------
 export const PLATELET_MAX_DRIFTING = 4;
 export const PLATELET_BASE_SPEED = 90;
