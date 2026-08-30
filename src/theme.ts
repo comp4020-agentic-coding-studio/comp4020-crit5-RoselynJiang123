@@ -44,6 +44,13 @@ export function yBot(x: number): number {
   return LUMEN_BOTTOM_CENTER + LUMEN_WOBBLE_AMPLITUDE * Math.sin((x / VIEW_W) * 2 * Math.PI + LUMEN_BOTTOM_PHASE);
 }
 
+export function wallSegment(fn: (x: number) => number, x0: number, x1: number): string {
+  const step = WALL_SAMPLE_STEP / 4;
+  let d = `M${x0.toFixed(1)},${fn(x0).toFixed(1)}`;
+  for (let x = x0 + step; x < x1; x += step) d += ` L${x.toFixed(1)},${fn(x).toFixed(1)}`;
+  return d + ` L${x1.toFixed(1)},${fn(x1).toFixed(1)}`;
+}
+
 function sampledPath(fn: (x: number) => number): string {
   let d = `M0,${fn(0).toFixed(1)}`;
   for (let x = WALL_SAMPLE_STEP; x <= VIEW_W; x += WALL_SAMPLE_STEP) d += ` L${x},${fn(x).toFixed(1)}`;
@@ -55,9 +62,6 @@ function sampledPath(fn: (x: number) => number): string {
 // frame. The lower wall gains a real gap once woundSize > 0 (Step 2), so it
 // is recomputed per frame in the renderer instead of being a constant here.
 export const WALL_TOP_PATH = sampledPath(yTop);
-// Step 1 only: a single unbroken bottom wall. Step 2 replaces this with two
-// dynamically-recomputed segments either side of the breach gap.
-export const WALL_BOTTOM_PATH = sampledPath(yBot);
 export const LUMEN_PATH = (() => {
   let d = `M0,${yTop(0).toFixed(1)}`;
   for (let x = WALL_SAMPLE_STEP; x <= VIEW_W; x += WALL_SAMPLE_STEP) d += ` L${x},${yTop(x).toFixed(1)}`;
@@ -70,6 +74,22 @@ export const WOUND_X = VIEW_W / 2;
 // Derived from yBot(WOUND_X) so the wound always sits exactly on the sampled
 // lower wall curve, never independently placed.
 export const WOUND_Y = yBot(WOUND_X);
+
+// ---------- wound breach (a real gap in the lower wall) ----------
+// The breach is a torn opening in the wall itself, not a shape drawn over an
+// intact wall — its half-width shrinks toward 0 as woundSize heals, closing
+// the actual gap rather than just fading a decal.
+export const BREACH_HALF_MIN = 12 * REF_SCALE_X;
+export const BREACH_HALF_GROWTH = 46 * REF_SCALE_X;
+
+export type BreachGeom = { x0: number; x1: number; y0: number; y1: number; half: number };
+
+export function breachGeom(woundSize: number): BreachGeom {
+  const half = BREACH_HALF_MIN + BREACH_HALF_GROWTH * woundSize;
+  const x0 = WOUND_X - half;
+  const x1 = WOUND_X + half;
+  return { x0, x1, y0: yBot(x0), y1: yBot(x1), half };
+}
 
 // Gaussian spreads for the clot's two effects on cell motion: how far its
 // upward push (on the lower bound) and its upstream speed dip reach along x.
@@ -127,8 +147,6 @@ export const LUMEN_DEPLETED: [number, number, number] = [92, 68, 66];
 // ---------- static SVG palette (src/pages/index.astro) ----------
 export const COLOR_TISSUE_GLOW = "#ffd9a8";
 export const COLOR_STAIN = "#5a0d14";
-export const COLOR_WOUND_DARK = "#3a0f14";
-export const COLOR_WOUND_DARKEST = "#170305";
 export const COLOR_SEAL_FLASH_STROKE = "#fff3d6";
 export const COLOR_DRIP = "#8e1420";
 export const COLOR_RBC_FALLBACK = "#c42b2b";
@@ -173,7 +191,20 @@ export const ENDOTHELIUM_OPACITY = 0.42;
 export const COLOR_VIGNETTE = "#050203";
 export const VIGNETTE_OPACITY = 0.7;
 
-export const WOUND_TEAR_SCALE = 28;
+export const COLOR_BREACH_INTERIOR = "#140a0c";
+export const COLOR_TORN_LIP = "#3b191d";
+export const COLOR_BREACH_GLOW = "#ff7a63";
+// Radius tracks the breach's own half-width directly, so the glow shrinks
+// along with the closing gap rather than staying fixed while it heals.
+export const BREACH_GLOW_RADIUS_RATIO = 1.4;
+export const BREACH_GLOW_OPACITY_BASE = 0.35;
+export const BREACH_GLOW_OPACITY_PULSE = 0.5;
+
+// Pale seam across the narrowing gap as it heals — invisible on a fresh
+// wound, most visible as woundSize approaches 0. See "bind every visual to
+// state": pale healing seam <- 1 - woundSize.
+export const COLOR_HEALING_SEAM = "#c08287";
+export const HEALING_SEAM_STROKE_WIDTH = 2 * REF_SCALE_Y;
 
 // ---------- bleeding (seeping plume + growing pool) ----------
 // The pool's rx is driven directly by (1 - bloodVolume) — it IS the

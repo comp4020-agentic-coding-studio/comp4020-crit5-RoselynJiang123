@@ -11,6 +11,7 @@ import {
   PLATELET_SPAWN,
   WOUND_INITIAL,
 } from "./rules";
+import type { BreachGeom } from "../theme";
 import type { GameState } from "./rules";
 import {
   VIEW_W,
@@ -24,6 +25,11 @@ import {
   CONGESTION_STRENGTH,
   WOUND_X,
   WOUND_Y,
+  breachGeom,
+  wallSegment,
+  BREACH_GLOW_RADIUS_RATIO,
+  BREACH_GLOW_OPACITY_BASE,
+  BREACH_GLOW_OPACITY_PULSE,
   RBC_MAX,
   RBC_BASE_SPEED,
   RBC_SPAWN_INTERVAL,
@@ -309,7 +315,15 @@ export function triggerIdleHint(visual: VisualState) {
 export type Refs = {
   lumen: SVGPathElement;
   tissue: SVGEllipseElement;
-  woundTear: SVGGElement;
+  wallBottomLeft: SVGPathElement;
+  wallBottomRight: SVGPathElement;
+  endoBottomLeft: SVGPathElement;
+  endoBottomRight: SVGPathElement;
+  breachInterior: SVGPathElement;
+  breachLipLeft: SVGPathElement;
+  breachLipRight: SVGPathElement;
+  breachGlow: SVGCircleElement;
+  healingSeam: SVGPathElement;
   clotBulge: SVGCircleElement;
   fibrinGroup: SVGGElement;
   dripGroup: SVGGElement;
@@ -402,6 +416,81 @@ function renderFibrin(group: SVGGElement, els: SVGPathElement[], fibrin: Fibrin[
 // drawn from, plus the clot's gaussian upward push on the lower bound — never
 // a sine wobble independent of the wall. clotHeight is (1 - lumen(state)) *
 // LUMEN_HEIGHT, i.e. read from the rules selector, not recomputed here.
+// Irregular dark cavity behind the torn gap — hand-authored bezier shape
+// rather than a literal trace of the reference's control points (those
+// weren't recoverable verbatim), but built from the same breach geometry so
+// it always spans exactly the current gap.
+function breachInteriorPath(g: BreachGeom): string {
+  const midX = WOUND_X;
+  const baseY = Math.max(g.y0, g.y1);
+  const midY = baseY + g.half * 0.9;
+  return (
+    `M${g.x0.toFixed(1)},${g.y0.toFixed(1)} ` +
+    `C${(g.x0 + g.half * 0.15).toFixed(1)},${(g.y0 + g.half * 0.7).toFixed(1)} ` +
+    `${(midX - g.half * 0.5).toFixed(1)},${midY.toFixed(1)} ${midX.toFixed(1)},${(midY + g.half * 0.15).toFixed(1)} ` +
+    `C${(midX + g.half * 0.5).toFixed(1)},${midY.toFixed(1)} ` +
+    `${(g.x1 - g.half * 0.15).toFixed(1)},${(g.y1 + g.half * 0.7).toFixed(1)} ${g.x1.toFixed(1)},${g.y1.toFixed(1)} ` +
+    `Q${midX.toFixed(1)},${(Math.min(g.y0, g.y1) - g.half * 0.12).toFixed(1)} ${g.x0.toFixed(1)},${g.y0.toFixed(1)} Z`
+  );
+}
+
+// A small torn flap at one gap edge: thick where it tears from the wall,
+// tapering as it curls outward and down. dir is -1 for the left edge (curls
+// left-down), +1 for the right edge (curls right-down).
+function lipPath(x: number, y: number, dir: 1 | -1, half: number): string {
+  const len = half * 0.9;
+  const width = half * 0.55;
+  const tipX = x + dir * len * 0.6;
+  const tipY = y + len * 0.9;
+  return (
+    `M${x.toFixed(1)},${y.toFixed(1)} ` +
+    `C${(x + dir * width * 0.3).toFixed(1)},${(y + len * 0.3).toFixed(1)} ` +
+    `${(x + dir * len * 0.7).toFixed(1)},${(y + len * 0.7).toFixed(1)} ${tipX.toFixed(1)},${tipY.toFixed(1)} ` +
+    `C${(x + dir * len * 0.35).toFixed(1)},${(y + len * 0.55).toFixed(1)} ` +
+    `${(x + dir * width * 0.15).toFixed(1)},${(y + len * 0.15).toFixed(1)} ${x.toFixed(1)},${y.toFixed(1)} Z`
+  );
+}
+
+function seamPath(g: BreachGeom): string {
+  const span = g.half * 0.7;
+  const x1 = WOUND_X - span;
+  const x2 = WOUND_X + span;
+  const y1 = yBot(x1) - g.half * 0.1;
+  const y2 = yBot(x2) - g.half * 0.1;
+  const my = Math.min(y1, y2) - g.half * 0.25;
+  return `M${x1.toFixed(1)},${y1.toFixed(1)} Q${WOUND_X.toFixed(1)},${my.toFixed(1)} ${x2.toFixed(1)},${y2.toFixed(1)}`;
+}
+
+// The breach is a real gap in the wall, not a shape drawn over an intact
+// one: the lower wall (and its endothelium restroke) is redrawn every frame
+// as two segments stopping short of the current gap, so cell containment,
+// the drawn wall, and the visible opening can never disagree.
+function renderBreach(refs: Refs, woundSize: number, elapsed: number) {
+  const g = breachGeom(woundSize);
+
+  const leftWall = wallSegment(yBot, 0, g.x0);
+  const rightWall = wallSegment(yBot, g.x1, VIEW_W);
+  refs.wallBottomLeft.setAttribute("d", leftWall);
+  refs.wallBottomRight.setAttribute("d", rightWall);
+  refs.endoBottomLeft.setAttribute("d", leftWall);
+  refs.endoBottomRight.setAttribute("d", rightWall);
+
+  refs.breachInterior.setAttribute("d", breachInteriorPath(g));
+  refs.breachLipLeft.setAttribute("d", lipPath(g.x0, g.y0, -1, g.half));
+  refs.breachLipRight.setAttribute("d", lipPath(g.x1, g.y1, 1, g.half));
+
+  refs.breachGlow.setAttribute("cx", String(WOUND_X));
+  refs.breachGlow.setAttribute("cy", ((g.y0 + g.y1) / 2).toFixed(1));
+  refs.breachGlow.setAttribute("r", (g.half * BREACH_GLOW_RADIUS_RATIO).toFixed(1));
+  refs.breachGlow.setAttribute(
+    "opacity",
+    clamp01(BREACH_GLOW_OPACITY_BASE + BREACH_GLOW_OPACITY_PULSE * pulse(elapsed)).toFixed(3),
+  );
+
+  refs.healingSeam.setAttribute("d", seamPath(g));
+  refs.healingSeam.setAttribute("opacity", clamp01(1 - woundSize / WOUND_INITIAL).toFixed(3));
+}
+
 function renderRBCs(
   group: SVGGElement,
   els: Map<number, SVGEllipseElement>,
@@ -522,10 +611,7 @@ export function createRenderer(refs: Refs) {
 
     const woundRatio = clamp01(gameState.woundSize / WOUND_INITIAL);
     const woundR = 9 + 46 * woundRatio;
-    refs.woundTear.setAttribute(
-      "transform",
-      `translate(${WOUND_X},${WOUND_Y}) scale(${woundR.toFixed(2)})`,
-    );
+    renderBreach(refs, gameState.woundSize, gameState.elapsed);
 
     refs.clotBulge.setAttribute("r", (6 + 78 * occlusion).toFixed(2));
     refs.clotBulge.setAttribute("opacity", (0.5 + 0.4 * occlusion).toFixed(3));

@@ -4,8 +4,6 @@ import {
   COLOR_TISSUE_GLOW,
   COLOR_STAIN,
   COLOR_PLATELET_HALO,
-  COLOR_WOUND_DARK,
-  COLOR_WOUND_DARKEST,
   COLOR_SEAL_FLASH_STROKE,
   COLOR_DRIP,
   COLOR_PLUME_NEAR,
@@ -28,9 +26,12 @@ import {
   COLOR_VIGNETTE,
   VIGNETTE_OPACITY,
   WALL_TOP_PATH,
-  WALL_BOTTOM_PATH,
   LUMEN_PATH,
-  WOUND_TEAR_SCALE,
+  COLOR_BREACH_INTERIOR,
+  COLOR_TORN_LIP,
+  COLOR_BREACH_GLOW,
+  COLOR_HEALING_SEAM,
+  HEALING_SEAM_STROKE_WIDTH,
   WOUND_X,
   WOUND_Y,
   VIEW_W,
@@ -95,6 +96,10 @@ import {
           <stop offset="55%" stop-color={COLOR_PLUME_FAR} stop-opacity="0.55"></stop>
           <stop offset="100%" stop-color={COLOR_PLUME_FAR} stop-opacity="0"></stop>
         </radialGradient>
+        <radialGradient id="breach-glow-grad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color={COLOR_BREACH_GLOW} stop-opacity="0.9"></stop>
+          <stop offset="100%" stop-color={COLOR_BREACH_GLOW} stop-opacity="0"></stop>
+        </radialGradient>
       </defs>
 
       <ellipse
@@ -106,6 +111,8 @@ import {
         fill="url(#tissue-grad)"
         opacity={TISSUE_ELLIPSE.opacity}
       />
+
+      <circle id="breach-glow" cx={WOUND_X} cy={WOUND_Y} r="0" fill="url(#breach-glow-grad)" opacity="0" />
 
       <path id="vessel-lumen" d={LUMEN_PATH} fill={COLOR_LUMEN_FILL} />
 
@@ -122,7 +129,14 @@ import {
         stroke-linecap="round"
       />
       <path
-        d={WALL_BOTTOM_PATH}
+        id="wall-bottom-left"
+        fill="none"
+        stroke={COLOR_WALL_STROKE}
+        stroke-width={WALL_STROKE_WIDTH}
+        stroke-linecap="round"
+      />
+      <path
+        id="wall-bottom-right"
         fill="none"
         stroke={COLOR_WALL_STROKE}
         stroke-width={WALL_STROKE_WIDTH}
@@ -136,12 +150,23 @@ import {
         opacity={ENDOTHELIUM_OPACITY}
       />
       <path
-        d={WALL_BOTTOM_PATH}
+        id="endo-bottom-left"
         fill="none"
         stroke={COLOR_ENDOTHELIUM}
         stroke-width={ENDOTHELIUM_STROKE_WIDTH}
         opacity={ENDOTHELIUM_OPACITY}
       />
+      <path
+        id="endo-bottom-right"
+        fill="none"
+        stroke={COLOR_ENDOTHELIUM}
+        stroke-width={ENDOTHELIUM_STROKE_WIDTH}
+        opacity={ENDOTHELIUM_OPACITY}
+      />
+      <path id="breach-interior" fill={COLOR_BREACH_INTERIOR} />
+      <path id="breach-lip-left" fill={COLOR_TORN_LIP} />
+      <path id="breach-lip-right" fill={COLOR_TORN_LIP} />
+      <path id="healing-seam" fill="none" stroke={COLOR_HEALING_SEAM} stroke-width={HEALING_SEAM_STROKE_WIDTH} stroke-linecap="round" opacity="0" />
 
       <circle id="blood-stain" cx={WOUND_X} cy={WOUND_Y + STAIN_Y_OFFSET} r="0" fill="url(#stain-grad)" opacity="0" />
       <ellipse id="bleed-pool" cx={WOUND_X} cy={WOUND_Y} rx="0" ry="0" fill={COLOR_POOL} opacity="0" />
@@ -149,15 +174,6 @@ import {
       <circle id="idle-glow" cx={WOUND_X} cy={WOUND_Y} r={IDLE_GLOW_RADIUS} fill={COLOR_IDLE_GLOW} opacity="0" />
       <circle id="clot-bulge" cx={WOUND_X} cy={WOUND_Y} r="0" fill={COLOR_CLOT_BULGE} opacity="0" />
       <g id="fibrin-group" stroke={COLOR_FIBRIN} stroke-width={FIBRIN_STROKE_WIDTH} fill="none" opacity={FIBRIN_GROUP_OPACITY}></g>
-
-      <g id="wound-tear" transform={`translate(${WOUND_X},${WOUND_Y}) scale(${WOUND_TEAR_SCALE})`}>
-        <path d="M -0.4,-0.95 L -0.05,-0.85 L -0.201,-0.618 Z" fill={COLOR_WOUND_DARK} opacity="0.9" />
-        <path d="M 0.34,1.046 L 0.55,1.4 L 0.15,1.25 Z" fill={COLOR_WOUND_DARK} opacity="0.9" />
-        <path
-          d="M 1,0 L 0.445,0.323 L 0.340,1.046 L -0.185,0.571 L -0.930,0.676 L -0.5,0 L -0.849,-0.617 L -0.201,-0.618 L 0.371,-1.141 L 0.469,-0.341 Z"
-          fill={COLOR_WOUND_DARKEST}
-        />
-      </g>
 
       <circle id="seal-flash" cx={WOUND_X} cy={WOUND_Y} r="0" fill="none" stroke={COLOR_SEAL_FLASH_STROKE} stroke-width={SEAL_FLASH_STROKE_WIDTH} opacity="0" />
 
