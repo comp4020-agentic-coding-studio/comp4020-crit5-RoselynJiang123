@@ -101,14 +101,17 @@ export const CONGESTION_STRENGTH = 0.7; // local speed dips to (1 - 0.7) at clot
 // Haematocrit is ~45% — a vessel is packed with cells that jostle each
 // other. Overlap is intentionally allowed: no collision detection, that IS
 // what blood looks like. See CLOT-FLOW visual reference, Plate 02.
-export const RBC_MAX = 90;
+export const RBC_MAX = 85;
 export const RBC_BASE_SPEED = 260;
 export const RBC_SPAWN_INTERVAL = 0.12;
 // Biconcave-disc read: an off-centre radial gradient (see the "rbc" gradient
 // in index.astro) plus a flattened ellipse. rx/ry ratio and per-cell rotation
 // and size variance are what sell the disc — see CLOT-FLOW visual reference.
-export const RBC_BASE_RY = 6.5; // ±15% variance keeps ry within ~5.5–7.5
-export const RBC_RX_RATIO = 1.15;
+// Reference gives rx 12 / ry 10 in its own 600x300 space; both scale by
+// REF_SCALE_Y (not X and Y separately) so the 1.2 aspect ratio survives the
+// rescale into this game's viewBox.
+export const RBC_BASE_RY = 10 * REF_SCALE_Y; // ±15% variance
+export const RBC_RX_RATIO = 1.2;
 export const RBC_SIZE_VARIANCE = 0.15; // ±15%, assigned once at spawn
 
 // Hard cap across every RBC layer combined (foreground + background), so a
@@ -176,10 +179,12 @@ export const COLOR_RBC_FALLBACK = "#c42b2b";
 export const COLOR_PLATELET_BODY = "#f6e8d4";
 export const COLOR_PLATELET_HALO = "#ffc794";
 
-// Red-cell biconcave-disc gradient: off-centre origin + central pallor.
-export const COLOR_RBC_CORE = "#d4696c";
-export const COLOR_RBC_MID = "#a83036";
-export const COLOR_RBC_RIM = "#7d1a20";
+// Red-cell biconcave-disc gradient: off-centre origin + central pallor, 4
+// stops per CLOT-FLOW visual reference (gradient itself: cx47% cy45% r56%).
+export const COLOR_RBC_CORE = "#cf6469"; // 0%
+export const COLOR_RBC_MID = "#c05057"; // 42%
+export const COLOR_RBC_OUTER = "#9b262d"; // 72%
+export const COLOR_RBC_RIM = "#7a181e"; // 100%
 
 // Irregular cell blob, not a geometric triangle — see CLOT-FLOW visual
 // reference, Plate 02.

@@ -12,6 +12,7 @@ import {
   COLOR_RBC_FALLBACK,
   COLOR_RBC_CORE,
   COLOR_RBC_MID,
+  COLOR_RBC_OUTER,
   COLOR_RBC_RIM,
   COLOR_RBC_BACK_NEAR,
   COLOR_RBC_BACK_FAR,
@@ -82,9 +83,10 @@ import {
           <stop offset="100%" stop-color={COLOR_PLATELET_HALO} stop-opacity="0"></stop>
         </radialGradient>
         <path id="platelet-shape" d={PLATELET_SHAPE_PATH}></path>
-        <radialGradient id="rbc" cx="42%" cy="38%" r="62%">
+        <radialGradient id="rbc" cx="47%" cy="45%" r="56%">
           <stop offset="0%" stop-color={COLOR_RBC_CORE}></stop>
-          <stop offset="45%" stop-color={COLOR_RBC_MID}></stop>
+          <stop offset="42%" stop-color={COLOR_RBC_MID}></stop>
+          <stop offset="72%" stop-color={COLOR_RBC_OUTER}></stop>
           <stop offset="100%" stop-color={COLOR_RBC_RIM}></stop>
         </radialGradient>
         <radialGradient id="rbc-back" cx="42%" cy="38%" r="62%">
