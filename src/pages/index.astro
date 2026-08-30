@@ -1,5 +1,25 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import {
+  COLOR_WALL_TOP,
+  COLOR_WALL_BOTTOM,
+  COLOR_TISSUE_GLOW,
+  COLOR_STAIN,
+  COLOR_PLATELET_HALO,
+  COLOR_LUMEN_RECT,
+  COLOR_WOUND_DARK,
+  COLOR_WOUND_DARKEST,
+  COLOR_SEAL_FLASH_STROKE,
+  COLOR_DRIP,
+  COLOR_RBC_FALLBACK,
+  PLATELET_SHAPE_PATH,
+  TISSUE_ELLIPSE,
+  VESSEL_WALL_PATH,
+  VESSEL_LUMEN_RECT,
+  WOUND_TEAR_SCALE,
+  WOUND_X,
+  WOUND_Y,
+} from "../theme";
 ---
 
 <Layout title="CLOT / FLOW" description="A one-mechanic clotting game.">
@@ -18,54 +38,64 @@ import Layout from "../layouts/Layout.astro";
     >
       <defs>
         <linearGradient id="wall-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#7a2b30"></stop>
-          <stop offset="100%" stop-color="#2f0f13"></stop>
+          <stop offset="0%" stop-color={COLOR_WALL_TOP}></stop>
+          <stop offset="100%" stop-color={COLOR_WALL_BOTTOM}></stop>
         </linearGradient>
         <radialGradient id="tissue-grad" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="#ffd9a8" stop-opacity="0.5"></stop>
-          <stop offset="100%" stop-color="#ffd9a8" stop-opacity="0"></stop>
+          <stop offset="0%" stop-color={COLOR_TISSUE_GLOW} stop-opacity="0.5"></stop>
+          <stop offset="100%" stop-color={COLOR_TISSUE_GLOW} stop-opacity="0"></stop>
         </radialGradient>
         <radialGradient id="stain-grad" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="#5a0d14" stop-opacity="0.9"></stop>
-          <stop offset="100%" stop-color="#5a0d14" stop-opacity="0"></stop>
+          <stop offset="0%" stop-color={COLOR_STAIN} stop-opacity="0.9"></stop>
+          <stop offset="100%" stop-color={COLOR_STAIN} stop-opacity="0"></stop>
         </radialGradient>
         <radialGradient id="platelet-halo-grad" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="#fff3d6" stop-opacity="0.9"></stop>
-          <stop offset="100%" stop-color="#fff3d6" stop-opacity="0"></stop>
+          <stop offset="0%" stop-color={COLOR_PLATELET_HALO} stop-opacity="0.9"></stop>
+          <stop offset="100%" stop-color={COLOR_PLATELET_HALO} stop-opacity="0"></stop>
         </radialGradient>
-        <path
-          id="platelet-shape"
-          d="M 1,0 L 0.35,0.606 L -0.525,0.909 L -0.75,0 L -0.55,-0.953 L 0.325,-0.563 Z"
-        ></path>
+        <path id="platelet-shape" d={PLATELET_SHAPE_PATH}></path>
       </defs>
 
-      <ellipse id="tissue" cx="1250" cy="450" rx="380" ry="260" fill="url(#tissue-grad)" opacity="0.2" />
-
-      <path
-        id="vessel-wall"
-        d="M 0,350 Q 200,335 400,350 T 800,350 T 1200,350 T 1600,350 L 1600,550 Q 1400,565 1200,550 T 800,550 T 400,550 T 0,550 Z"
-        fill="url(#wall-grad)"
+      <ellipse
+        id="tissue"
+        cx={TISSUE_ELLIPSE.cx}
+        cy={TISSUE_ELLIPSE.cy}
+        rx={TISSUE_ELLIPSE.rx}
+        ry={TISSUE_ELLIPSE.ry}
+        fill="url(#tissue-grad)"
+        opacity={TISSUE_ELLIPSE.opacity}
       />
-      <rect id="vessel-lumen" x="40" y="400" width="1520" height="100" rx="30" fill="#8a1420" opacity="0.8" />
 
-      <circle id="blood-stain" cx="800" cy="600" r="0" fill="url(#stain-grad)" opacity="0" />
-      <circle id="idle-glow" cx="800" cy="450" r="90" fill="#ff5b5b" opacity="0" />
-      <circle id="clot-bulge" cx="800" cy="450" r="0" fill="#5c1b1b" opacity="0" />
+      <path id="vessel-wall" d={VESSEL_WALL_PATH} fill="url(#wall-grad)" />
+      <rect
+        id="vessel-lumen"
+        x={VESSEL_LUMEN_RECT.x}
+        y={VESSEL_LUMEN_RECT.y}
+        width={VESSEL_LUMEN_RECT.width}
+        height={VESSEL_LUMEN_RECT.height}
+        rx={VESSEL_LUMEN_RECT.rx}
+        fill={COLOR_LUMEN_RECT}
+        opacity={VESSEL_LUMEN_RECT.opacity}
+      />
+
+      <circle id="blood-stain" cx={WOUND_X} cy="600" r="0" fill="url(#stain-grad)" opacity="0" />
+      <circle id="idle-glow" cx={WOUND_X} cy={WOUND_Y} r="90" fill="#ff5b5b" opacity="0" />
+      <circle id="clot-bulge" cx={WOUND_X} cy={WOUND_Y} r="0" fill="#5c1b1b" opacity="0" />
       <g id="fibrin-group" stroke="#f2d9c8" stroke-width="2.5" fill="none" opacity="0.9"></g>
 
-      <g id="wound-tear" transform="translate(800,450) scale(28)">
-        <path d="M -0.4,-0.95 L -0.05,-0.85 L -0.201,-0.618 Z" fill="#3a0f14" opacity="0.9" />
-        <path d="M 0.34,1.046 L 0.55,1.4 L 0.15,1.25 Z" fill="#3a0f14" opacity="0.9" />
+      <g id="wound-tear" transform={`translate(${WOUND_X},${WOUND_Y}) scale(${WOUND_TEAR_SCALE})`}>
+        <path d="M -0.4,-0.95 L -0.05,-0.85 L -0.201,-0.618 Z" fill={COLOR_WOUND_DARK} opacity="0.9" />
+        <path d="M 0.34,1.046 L 0.55,1.4 L 0.15,1.25 Z" fill={COLOR_WOUND_DARK} opacity="0.9" />
         <path
           d="M 1,0 L 0.445,0.323 L 0.340,1.046 L -0.185,0.571 L -0.930,0.676 L -0.5,0 L -0.849,-0.617 L -0.201,-0.618 L 0.371,-1.141 L 0.469,-0.341 Z"
-          fill="#170305"
+          fill={COLOR_WOUND_DARKEST}
         />
       </g>
 
-      <circle id="seal-flash" cx="800" cy="450" r="0" fill="none" stroke="#fff3d6" stroke-width="3" opacity="0" />
+      <circle id="seal-flash" cx={WOUND_X} cy={WOUND_Y} r="0" fill="none" stroke={COLOR_SEAL_FLASH_STROKE} stroke-width="3" opacity="0" />
 
-      <g id="drip-group" fill="#8e1420"></g>
-      <g id="rbc-group" fill="#c42b2b"></g>
+      <g id="drip-group" fill={COLOR_DRIP}></g>
+      <g id="rbc-group" fill={COLOR_RBC_FALLBACK}></g>
       <g id="platelet-group"></g>
     </svg>
     <div id="outcome-overlay" class="overlay">

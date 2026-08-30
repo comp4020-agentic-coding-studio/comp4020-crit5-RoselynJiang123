@@ -12,38 +12,35 @@ import {
   WOUND_INITIAL,
 } from "./rules";
 import type { GameState } from "./rules";
+import {
+  VIEW_W,
+  VIEW_H,
+  LUMEN_TOP,
+  LUMEN_BOTTOM,
+  WOUND_X,
+  WOUND_Y,
+  RBC_MAX,
+  RBC_BASE_SPEED,
+  RBC_SPAWN_INTERVAL,
+  RBC_QUEUE_ZONE,
+  PLATELET_MAX_DRIFTING,
+  PLATELET_BASE_SPEED,
+  PLATELET_HIT_RADIUS,
+  GLIDE_DURATION,
+  HINT_DURATION,
+  HINT_AMPLITUDE,
+  FIBRIN_MAX,
+  DRIP_PERIOD,
+  SEAL_FLASH_DURATION,
+  LUMEN_FULL,
+  LUMEN_DEPLETED,
+} from "../theme";
 
 export const SVG_NS = "http://www.w3.org/2000/svg";
 
-export const VIEW_W = 1600;
-export const VIEW_H = 900;
-
-const LUMEN_TOP = 400;
-const LUMEN_BOTTOM = 500;
+export { VIEW_W, VIEW_H, WOUND_X, WOUND_Y, PLATELET_HIT_RADIUS };
 export const VESSEL_TOP = LUMEN_TOP;
 export const VESSEL_BOTTOM = LUMEN_BOTTOM;
-export const WOUND_X = 800;
-export const WOUND_Y = 450;
-
-const RBC_MAX = 40;
-const RBC_BASE_SPEED = 260;
-const RBC_SPAWN_INTERVAL = 0.12;
-const RBC_QUEUE_ZONE = 220;
-
-const PLATELET_MAX_DRIFTING = 4;
-const PLATELET_BASE_SPEED = 90;
-export const PLATELET_HIT_RADIUS = 34;
-
-const GLIDE_DURATION = 0.15;
-const HINT_DURATION = 0.5;
-const HINT_AMPLITUDE = 26;
-
-const FIBRIN_MAX = 5;
-const DRIP_PERIOD = 1.2;
-const SEAL_FLASH_DURATION = 0.35;
-
-const LUMEN_FULL: [number, number, number] = [184, 31, 46];
-const LUMEN_DEPLETED: [number, number, number] = [92, 68, 66];
 
 let rbcIdSeq = 0;
 let plateletIdSeq = 0;
