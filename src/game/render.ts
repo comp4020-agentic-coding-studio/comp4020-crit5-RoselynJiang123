@@ -39,7 +39,10 @@ import {
   GLIDE_DURATION,
   HINT_DURATION,
   HINT_AMPLITUDE,
-  FIBRIN_MAX,
+  FIBRIN_STRAND_MAX,
+  FIBRIN_MESH_BASE_RADIUS,
+  FIBRIN_MESH_RADIUS_GROWTH,
+  FIBRIN_CROSSLINK_EVERY,
   DRIP_PERIOD,
   SEAL_FLASH_DURATION,
   LUMEN_FULL,
@@ -114,13 +117,10 @@ export type Platelet = {
   glideT: number;
 };
 
-export type Fibrin = { angleA: number; angleB: number; bow: number };
-
 export type VisualState = {
   rbcs: RBC[];
   rbcsBack: RBC[];
   platelets: Platelet[];
-  fibrin: Fibrin[];
   hoveredId: number | null;
   rbcSpawnT: number;
   rbcBackSpawnT: number;
@@ -138,7 +138,6 @@ export function createVisualState(): VisualState {
     rbcs: [],
     rbcsBack: [],
     platelets: [],
-    fibrin: [],
     hoveredId: null,
     rbcSpawnT: 0,
     rbcBackSpawnT: 0,
@@ -300,13 +299,6 @@ export function stepSealFlash(visual: VisualState, dt: number) {
   }
 }
 
-export function addFibrinFor(visual: VisualState) {
-  if (visual.fibrin.length >= FIBRIN_MAX) return;
-  const angleA = Math.random() * Math.PI * 2;
-  const angleB = angleA + Math.PI + (Math.random() - 0.5) * 1.1;
-  visual.fibrin.push({ angleA, angleB, bow: (Math.random() - 0.5) * 22 });
-}
-
 export function triggerIdleHint(visual: VisualState) {
   if (visual.hintActive) return;
   const drifting = visual.platelets.filter((p) => p.state === "drifting");
@@ -406,23 +398,47 @@ function renderPool(el: SVGEllipseElement, bloodVolume: number) {
   el.setAttribute("opacity", (0.35 + 0.55 * lost).toFixed(3));
 }
 
-function renderFibrin(group: SVGGElement, els: SVGPathElement[], fibrin: Fibrin[], woundR: number) {
-  while (els.length < fibrin.length) {
+// Deterministic per-index pseudo-random in [0, 1) — strand N always gets the
+// same shape across frames, so the mesh doesn't reshuffle as strands are
+// added or removed with clot; it just grows or dissolves at the tail.
+function hash01(seed: number): number {
+  const s = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
+  return s - Math.floor(s);
+}
+
+// A woven mesh anchored in the clot mass: both ends of every strand fall
+// within a radius that grows with clot (the same "clot mass" the platelet
+// pile occupies), and angleA/angleB are independently randomised rather than
+// near-opposite, so strands cross each other instead of radiating cleanly —
+// that crossing IS the weave. Every FIBRIN_CROSSLINK_EVERYth strand spans a
+// wider radius so a few links visibly bridge across the mesh.
+function renderFibrinMesh(group: SVGGElement, els: SVGPathElement[], clotValue: number) {
+  const count = Math.min(FIBRIN_STRAND_MAX, Math.round(clamp01(clotValue) * FIBRIN_STRAND_MAX));
+  while (els.length < count) {
     const p = document.createElementNS(SVG_NS, "path");
+    p.setAttribute("stroke-linecap", "round");
     group.appendChild(p);
     els.push(p);
   }
-  const rEdge = woundR * 0.95;
-  fibrin.forEach((f, i) => {
-    const el = els[i];
-    const x1 = WOUND_X + Math.cos(f.angleA) * rEdge;
-    const y1 = WOUND_Y + Math.sin(f.angleA) * rEdge;
-    const x2 = WOUND_X + Math.cos(f.angleB) * rEdge;
-    const y2 = WOUND_Y + Math.sin(f.angleB) * rEdge;
-    const mid = (f.angleA + f.angleB) / 2;
-    const mx = (x1 + x2) / 2 + Math.cos(mid + Math.PI / 2) * f.bow;
-    const my = (y1 + y2) / 2 + Math.sin(mid + Math.PI / 2) * f.bow;
-    el.setAttribute("d", `M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}`);
+  while (els.length > count) {
+    els.pop()!.remove();
+  }
+  const meshR = FIBRIN_MESH_BASE_RADIUS + FIBRIN_MESH_RADIUS_GROWTH * clamp01(clotValue);
+  els.forEach((el, i) => {
+    const isCrossLink = i % FIBRIN_CROSSLINK_EVERY === FIBRIN_CROSSLINK_EVERY - 1;
+    const rA = meshR * (0.4 + 0.6 * hash01(i * 2));
+    const rB = meshR * (isCrossLink ? 1 : 0.4 + 0.6 * hash01(i * 2 + 1));
+    const angleA = hash01(i * 3.1) * Math.PI * 2;
+    const angleB = hash01(i * 3.1 + 1.7) * Math.PI * 2;
+    const x1 = WOUND_X + Math.cos(angleA) * rA;
+    const y1 = WOUND_Y + Math.sin(angleA) * rA;
+    const x2 = WOUND_X + Math.cos(angleB) * rB;
+    const y2 = WOUND_Y + Math.sin(angleB) * rB;
+    const bow = (hash01(i * 5.3) - 0.5) * meshR * 0.7;
+    const mid = (angleA + angleB) / 2;
+    const mx = (x1 + x2) / 2 + Math.cos(mid + Math.PI / 2) * bow;
+    const my = (y1 + y2) / 2 + Math.sin(mid + Math.PI / 2) * bow;
+    el.setAttribute("d", `M ${x1.toFixed(1)} ${y1.toFixed(1)} Q ${mx.toFixed(1)} ${my.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`);
   });
 }
 
@@ -686,8 +702,6 @@ export function createRenderer(refs: Refs) {
 
     refs.tissue.setAttribute("opacity", (0.12 + 0.5 * oxygenValue).toFixed(3));
 
-    const woundRatio = clamp01(gameState.woundSize / WOUND_INITIAL);
-    const woundR = 9 + 46 * woundRatio;
     renderBreach(refs, gameState.woundSize, gameState.elapsed);
 
     refs.clotBulge.setAttribute("r", (6 + 78 * occlusion).toFixed(2));
@@ -713,7 +727,7 @@ export function createRenderer(refs: Refs) {
     renderDrips(refs.dripGroup, dripEls, leakValue, gameState.elapsed);
     renderPlume(refs.bleedPlume, leakValue);
     renderPool(refs.bleedPool, bloodVol);
-    renderFibrin(refs.fibrinGroup, fibrinEls, visual.fibrin, woundR);
+    renderFibrinMesh(refs.fibrinGroup, fibrinEls, gameState.clot);
     const clotHeight = (1 - lumenValue) * LUMEN_HEIGHT;
     renderRBCs(refs.rbcBackGroup, rbcBackEls, visual.rbcsBack, clotHeight, "rbc-back", RBC_BACK_OPACITY);
     renderRBCs(refs.rbcGroup, rbcEls, visual.rbcs, clotHeight);

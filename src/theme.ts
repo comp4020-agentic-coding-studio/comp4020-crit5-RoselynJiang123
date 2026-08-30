@@ -157,7 +157,6 @@ export const GLIDE_DURATION = 0.15;
 export const HINT_DURATION = 0.5;
 export const HINT_AMPLITUDE = 26;
 
-export const FIBRIN_MAX = 5;
 export const DRIP_PERIOD = 1.2;
 export const SEAL_FLASH_DURATION = 0.35;
 
@@ -196,10 +195,17 @@ export const COLOR_CLOT_BULGE = "#5c1b1b";
 export const SEAL_FLASH_STROKE_WIDTH = 3;
 export const STAIN_Y_OFFSET = 150;
 
-// ---------- fibrin (radiating strands, static styling) ----------
-export const COLOR_FIBRIN = "#f2d9c8";
-export const FIBRIN_STROKE_WIDTH = 2.5;
-export const FIBRIN_GROUP_OPACITY = 0.9;
+// ---------- fibrin (woven mesh, both ends anchored in the clot mass) ----------
+// Count and reach both come straight from clot, so the mesh grows and
+// dissolves along with the clot itself rather than accumulating separately.
+// See "bind every visual to state": fibrin strand count <- round(clot * 12).
+export const COLOR_FIBRIN = "#e8d5c0";
+export const FIBRIN_STROKE_WIDTH = 0.9;
+export const FIBRIN_GROUP_OPACITY = 0.26;
+export const FIBRIN_STRAND_MAX = 12;
+export const FIBRIN_MESH_BASE_RADIUS = 8;
+export const FIBRIN_MESH_RADIUS_GROWTH = 32;
+export const FIBRIN_CROSSLINK_EVERY = 4; // every Nth strand is a cross-link spanning further
 
 // ---------- vessel wall (organic outline) ----------
 // Background tissue reads as flesh, not empty space, only if it is dark and

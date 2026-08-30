@@ -6,7 +6,6 @@ import {
 } from "../game/rules";
 import type { GameState } from "../game/rules";
 import {
-  addFibrinFor,
   createRenderer,
   createVisualState,
   stepAttaching,
@@ -152,7 +151,6 @@ function frame(t: number) {
     const completed = stepAttaching(visual, dt);
     for (const _id of completed) {
       gameState = addPlatelet(gameState);
-      addFibrinFor(visual);
       triggerSealFlash(visual);
       playAttachSound();
     }
