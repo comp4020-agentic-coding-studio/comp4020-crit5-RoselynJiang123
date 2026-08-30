@@ -42,6 +42,7 @@ import {
   GLIDE_DURATION,
   HINT_DURATION,
   HINT_AMPLITUDE,
+  IDLE_GLOW_OPACITY_PEAK,
   FIBRIN_STRAND_MAX,
   FIBRIN_CROSSLINK_EVERY,
   FIBRIN_BOX_X_RANGE,
@@ -778,7 +779,7 @@ export function createRenderer(refs: Refs) {
     const hintEnvelope = visual.hintActive
       ? Math.sin(clamp01(visual.hintT / HINT_DURATION) * Math.PI)
       : 0;
-    refs.idleGlow.setAttribute("opacity", (0.5 * hintEnvelope).toFixed(3));
+    refs.idleGlow.setAttribute("opacity", (IDLE_GLOW_OPACITY_PEAK * hintEnvelope).toFixed(3));
 
     if (visual.sealFlashActive) {
       const t = clamp01(visual.sealFlashT / SEAL_FLASH_DURATION);

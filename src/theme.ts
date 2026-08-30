@@ -216,6 +216,9 @@ export const TISSUE_ELLIPSE = { cx: 1250, cy: 450, rx: 380, ry: 260, opacity: 0.
 // ---------- idle hint / clot occlusion / seal flash / blood stain ----------
 export const COLOR_IDLE_GLOW = "#ff5b5b";
 export const IDLE_GLOW_RADIUS = 90;
+// Dim: this hint glow must never outshine the free platelets it's pointing
+// toward.
+export const IDLE_GLOW_OPACITY_PEAK = 0.32;
 export const SEAL_FLASH_STROKE_WIDTH = 3;
 export const STAIN_Y_OFFSET = 150;
 
@@ -314,8 +317,11 @@ export const COLOR_BREACH_GLOW = "#ff7a63";
 // Radius tracks the breach's own half-width directly, so the glow shrinks
 // along with the closing gap rather than staying fixed while it heals.
 export const BREACH_GLOW_RADIUS_RATIO = 1.4;
-export const BREACH_GLOW_OPACITY_BASE = 0.35;
-export const BREACH_GLOW_OPACITY_PULSE = 0.5;
+// Kept low: the free platelets are the brightest points on the opening
+// screen, and this glow's own pulse(state) multiplier never drops below 1,
+// so even its "base" already sits near this ceiling most of the time.
+export const BREACH_GLOW_OPACITY_BASE = 0.16;
+export const BREACH_GLOW_OPACITY_PULSE = 0.22;
 
 // Pale seam across the narrowing gap as it heals — invisible on a fresh
 // wound, most visible as woundSize approaches 0. See "bind every visual to
