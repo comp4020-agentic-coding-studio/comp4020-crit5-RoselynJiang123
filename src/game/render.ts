@@ -290,7 +290,7 @@ export function triggerIdleHint(visual: VisualState) {
 }
 
 export type Refs = {
-  lumen: SVGRectElement;
+  lumen: SVGPathElement;
   tissue: SVGEllipseElement;
   woundTear: SVGGElement;
   clotBulge: SVGCircleElement;

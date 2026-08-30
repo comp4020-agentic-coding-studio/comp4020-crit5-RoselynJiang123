@@ -31,7 +31,7 @@ function need<T extends Element>(id: string): T {
 
 const svg = need<SVGSVGElement>("game");
 const refs: Refs = {
-  lumen: need<SVGRectElement>("vessel-lumen"),
+  lumen: need<SVGPathElement>("vessel-lumen"),
   tissue: need<SVGEllipseElement>("tissue"),
   woundTear: need<SVGGElement>("wound-tear"),
   clotBulge: need<SVGCircleElement>("clot-bulge"),

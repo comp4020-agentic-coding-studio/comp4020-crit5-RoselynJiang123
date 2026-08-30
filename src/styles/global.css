@@ -2,7 +2,7 @@ html,
 body {
   margin: 0;
   height: 100%;
-  background: #0a0203;
+  background: #1d1013;
   overflow: hidden;
 }
 
@@ -82,7 +82,7 @@ h1.title-flash.fade-out {
   width: 100%;
   height: 100%;
   touch-action: none;
-  background: #0a0203;
+  background: #1d1013;
 }
 
 .platelet-hit {

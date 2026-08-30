@@ -1,12 +1,9 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import {
-  COLOR_WALL_TOP,
-  COLOR_WALL_BOTTOM,
   COLOR_TISSUE_GLOW,
   COLOR_STAIN,
   COLOR_PLATELET_HALO,
-  COLOR_LUMEN_RECT,
   COLOR_WOUND_DARK,
   COLOR_WOUND_DARKEST,
   COLOR_SEAL_FLASH_STROKE,
@@ -19,11 +16,22 @@ import {
   COLOR_RBC_BACK_FAR,
   PLATELET_SHAPE_PATH,
   TISSUE_ELLIPSE,
-  VESSEL_WALL_PATH,
-  VESSEL_LUMEN_RECT,
+  COLOR_LUMEN_FILL,
+  COLOR_WALL_STROKE,
+  WALL_STROKE_WIDTH,
+  COLOR_ENDOTHELIUM,
+  ENDOTHELIUM_STROKE_WIDTH,
+  ENDOTHELIUM_OPACITY,
+  COLOR_VIGNETTE,
+  VIGNETTE_OPACITY,
+  VESSEL_TOP_PATH,
+  VESSEL_BOTTOM_PATH,
+  VESSEL_LUMEN_PATH,
   WOUND_TEAR_SCALE,
   WOUND_X,
   WOUND_Y,
+  VIEW_W,
+  VIEW_H,
 } from "../theme";
 ---
 
@@ -42,10 +50,13 @@ import {
       aria-hidden="true"
     >
       <defs>
-        <linearGradient id="wall-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color={COLOR_WALL_TOP}></stop>
-          <stop offset="100%" stop-color={COLOR_WALL_BOTTOM}></stop>
-        </linearGradient>
+        <clipPath id="lumen-clip">
+          <path d={VESSEL_LUMEN_PATH}></path>
+        </clipPath>
+        <radialGradient id="vignette-grad" cx="50%" cy="50%" r="70%">
+          <stop offset="40%" stop-color={COLOR_VIGNETTE} stop-opacity="0"></stop>
+          <stop offset="100%" stop-color={COLOR_VIGNETTE} stop-opacity={VIGNETTE_OPACITY}></stop>
+        </radialGradient>
         <radialGradient id="tissue-grad" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stop-color={COLOR_TISSUE_GLOW} stop-opacity="0.5"></stop>
           <stop offset="100%" stop-color={COLOR_TISSUE_GLOW} stop-opacity="0"></stop>
@@ -80,16 +91,40 @@ import {
         opacity={TISSUE_ELLIPSE.opacity}
       />
 
-      <path id="vessel-wall" d={VESSEL_WALL_PATH} fill="url(#wall-grad)" />
-      <rect
-        id="vessel-lumen"
-        x={VESSEL_LUMEN_RECT.x}
-        y={VESSEL_LUMEN_RECT.y}
-        width={VESSEL_LUMEN_RECT.width}
-        height={VESSEL_LUMEN_RECT.height}
-        rx={VESSEL_LUMEN_RECT.rx}
-        fill={COLOR_LUMEN_RECT}
-        opacity={VESSEL_LUMEN_RECT.opacity}
+      <path id="vessel-lumen" d={VESSEL_LUMEN_PATH} fill={COLOR_LUMEN_FILL} />
+
+      <g clip-path="url(#lumen-clip)">
+        <g id="rbc-back-group" fill={COLOR_RBC_FALLBACK}></g>
+        <g id="rbc-group" fill={COLOR_RBC_FALLBACK}></g>
+      </g>
+
+      <path
+        d={VESSEL_TOP_PATH}
+        fill="none"
+        stroke={COLOR_WALL_STROKE}
+        stroke-width={WALL_STROKE_WIDTH}
+        stroke-linecap="round"
+      />
+      <path
+        d={VESSEL_BOTTOM_PATH}
+        fill="none"
+        stroke={COLOR_WALL_STROKE}
+        stroke-width={WALL_STROKE_WIDTH}
+        stroke-linecap="round"
+      />
+      <path
+        d={VESSEL_TOP_PATH}
+        fill="none"
+        stroke={COLOR_ENDOTHELIUM}
+        stroke-width={ENDOTHELIUM_STROKE_WIDTH}
+        opacity={ENDOTHELIUM_OPACITY}
+      />
+      <path
+        d={VESSEL_BOTTOM_PATH}
+        fill="none"
+        stroke={COLOR_ENDOTHELIUM}
+        stroke-width={ENDOTHELIUM_STROKE_WIDTH}
+        opacity={ENDOTHELIUM_OPACITY}
       />
 
       <circle id="blood-stain" cx={WOUND_X} cy="600" r="0" fill="url(#stain-grad)" opacity="0" />
@@ -109,9 +144,16 @@ import {
       <circle id="seal-flash" cx={WOUND_X} cy={WOUND_Y} r="0" fill="none" stroke={COLOR_SEAL_FLASH_STROKE} stroke-width="3" opacity="0" />
 
       <g id="drip-group" fill={COLOR_DRIP}></g>
-      <g id="rbc-back-group" fill={COLOR_RBC_FALLBACK}></g>
-      <g id="rbc-group" fill={COLOR_RBC_FALLBACK}></g>
       <g id="platelet-group"></g>
+
+      <rect
+        x="0"
+        y="0"
+        width={VIEW_W}
+        height={VIEW_H}
+        fill="url(#vignette-grad)"
+        pointer-events="none"
+      />
     </svg>
     <div id="outcome-overlay" class="overlay">
       <p id="outcome-word" class="outcome-word"></p>

@@ -62,12 +62,8 @@ export const LUMEN_FULL: [number, number, number] = [184, 31, 46];
 export const LUMEN_DEPLETED: [number, number, number] = [92, 68, 66];
 
 // ---------- static SVG palette (src/pages/index.astro) ----------
-export const COLOR_BG = "#0a0203";
-export const COLOR_WALL_TOP = "#7a2b30";
-export const COLOR_WALL_BOTTOM = "#2f0f13";
 export const COLOR_TISSUE_GLOW = "#ffd9a8";
 export const COLOR_STAIN = "#5a0d14";
-export const COLOR_LUMEN_RECT = "#8a1420";
 export const COLOR_WOUND_DARK = "#3a0f14";
 export const COLOR_WOUND_DARKEST = "#170305";
 export const COLOR_SEAL_FLASH_STROKE = "#fff3d6";
@@ -89,9 +85,27 @@ export const PLATELET_SHAPE_PATH =
 
 export const TISSUE_ELLIPSE = { cx: 1250, cy: 450, rx: 380, ry: 260, opacity: 0.2 };
 
-export const VESSEL_WALL_PATH =
-  "M 0,350 Q 200,335 400,350 T 800,350 T 1200,350 T 1600,350 L 1600,550 Q 1400,565 1200,550 T 800,550 T 400,550 T 0,550 Z";
+// ---------- vessel wall (organic outline) ----------
+// Background tissue reads as flesh, not empty space, only if it is dark and
+// warm rather than pure black. See CLOT-FLOW visual reference, Plate 04.
+export const COLOR_TISSUE_BG = "#1d1013";
+export const COLOR_LUMEN_FILL = "#2b1418";
+export const COLOR_WALL_STROKE = "#4a2126";
+export const WALL_STROKE_WIDTH = 13;
+export const COLOR_ENDOTHELIUM = "#c08287";
+export const ENDOTHELIUM_STROKE_WIDTH = 1.2;
+export const ENDOTHELIUM_OPACITY = 0.42;
+export const COLOR_VIGNETTE = "#050203";
+export const VIGNETTE_OPACITY = 0.7;
 
-export const VESSEL_LUMEN_RECT = { x: 40, y: 400, width: 1520, height: 100, rx: 30, opacity: 0.8 };
+// Gentle cubic-bezier curves, not straight lines — an artery wall is never
+// perfectly parallel. Wobble is baked into these paths at build time (they
+// are static geometry, not per-frame animation).
+export const VESSEL_TOP_PATH =
+  "M0,400 C320,388 533.3,412 800,400 C1066.7,388 1333.3,414 1600,400";
+export const VESSEL_BOTTOM_PATH =
+  "M0,500 C320,512 533.3,488 800,500 C1066.7,512 1333.3,488 1600,500";
+export const VESSEL_LUMEN_PATH =
+  `${VESSEL_TOP_PATH} L1600,500 C1333.3,488 1066.7,512 800,500 C533.3,488 320,512 0,500 Z`;
 
 export const WOUND_TEAR_SCALE = 28;
